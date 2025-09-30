@@ -1,0 +1,46 @@
+# AutoGrade DNN + LLM
+
+This project is an **Automated Assignment Grading System** that combines:
+- **DNN ** → learns from ~10% convenor-scored assignments  
+- **LLM (rubric-based scoring)** → provides general evaluation  
+- **Fusion & Calibration** → integrates both to produce final consistent scores  
+
+---
+
+## Project Structure
+```
+AI_Module/
+├─ data/
+│   ├─ raw/              # Raw PDF/Word assignments
+│   └─ processed/        # Preprocessed CSV files
+├─ models/
+│   └─ dnn_model.pt      # Trained models (long-term storage)
+├─ artifacts/
+│   ├─ faiss.index       # Embedding index
+│   └─ meta.json         # Metadata for embeddings
+├─ results/
+│   ├─ llm_scores.csv    # Raw LLM scoring results
+│   └─ final_scores.csv  # Final fused & calibrated scores
+├─ scripts/              # Step-wise runnable scripts
+├─ src/                  # Core source code (preprocessing, models, etc.)
+├─ main.py               # Main entry point
+├─ requirements.txt      # Python dependencies
+└─ README.md             # Project documentation
+```
+---
+
+## 1.Setup
+
+### 1.1 Create environment
+(1) Create a new environment:
+```
+conda create -n 9900 python=3.9
+```
+(2) Activate the environment:
+```
+conda activate 9900
+```
+(3) Install dependencies:
+```
+pip install -r requirements.txt
+```

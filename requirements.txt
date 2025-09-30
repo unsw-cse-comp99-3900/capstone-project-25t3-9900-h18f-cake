@@ -1,0 +1,20 @@
+# Core
+pandas==2.2.2
+numpy==1.26.4
+tqdm==4.66.4
+
+# Machine Learning / Deep Learning
+scikit-learn==1.5.1
+torch>=2.2.0
+sentence-transformers==2.7.0
+faiss-cpu==1.8.0
+
+# Document Processing
+pypdf==4.3.1
+python-docx==1.1.2
+pytesseract==0.3.10
+Pillow==10.3.0
+
+# Utilities
+pyyaml==6.0.2
+matplotlib==3.9.2
