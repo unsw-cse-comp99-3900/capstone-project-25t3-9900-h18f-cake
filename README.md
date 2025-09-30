@@ -44,3 +44,12 @@ conda activate 9900
 ```
 pip install -r requirements.txt
 ```
+
+
+
+更新github：
+git checkout ai_module
+拉取远程更新，同步到本地
+git pull origin ai_module
+ 
+git rm --cached .DS_Store

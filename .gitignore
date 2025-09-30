@@ -1,0 +1,16 @@
+# macOS system files
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+
+# Model files
+*.pt
+
+# Temporary / intermediate outputs
+artifacts/
+results/
