@@ -51,5 +51,12 @@ pip install -r requirements.txt
 git checkout ai_module
 拉取远程更新，同步到本地
 git pull origin ai_module
- 
+显示修改文件
+git status
+添加修改文件
+git add .
+提交本地修改
+git commit -m "操作描述"
+git push origin ai_module
+删除DS_Store
 git rm --cached .DS_Store

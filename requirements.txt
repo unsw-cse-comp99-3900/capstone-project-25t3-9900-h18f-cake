@@ -11,10 +11,19 @@ faiss-cpu==1.8.0
 
 # Document Processing
 pypdf==4.3.1
+pymupdf==1.21.0
 python-docx==1.1.2
 pytesseract==0.3.10
 Pillow==10.3.0
+pdfminer.six==20240706   # 另一套稳健的 PDF 文本抽取
+paddleocr>=3.0.0   
+paddlepaddle>=3.0.0,<4.0
+opencv-python-headless==4.10.0.84
+pytesseract==0.3.10
 
 # Utilities
 pyyaml==6.0.2
 matplotlib==3.9.2
+
+
+        
