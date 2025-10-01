@@ -23,16 +23,6 @@ except Exception:
     _OCR_AVAILABLE = False
 
 
-class Metadata:
-    def __init__(self, assignment_id: str, student_id: str, mark_type: str, response_path: str):
-        self.assignment_id = assignment_id
-        self.student_id = student_id
-        self.mark_type = mark_type
-        self.response_path = response_path
-
-    def __repr__(self):
-        return f"Metadata(assignment_id={self.assignment_id}, student_id={self.student_id}, mark_type={self.mark_type}, response_path={self.response_path})"
-
 class DataLoader:
     def __init__(
         self,

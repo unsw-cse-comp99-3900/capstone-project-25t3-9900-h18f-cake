@@ -24,6 +24,8 @@ pytesseract==0.3.10
 # Utilities
 pyyaml==6.0.2
 matplotlib==3.9.2
+# stem analysis
+nltk==3.9.1
 
 
         
