@@ -72,7 +72,10 @@ class TextCleaner:
                 if bucket:  # 结束前一个段
                     paragraphs.append(" ".join(bucket).strip())
                     bucket = []
-            bucket.append(ln)
+                current_title = ln.rstrip(":") + ":"
+                bucket.append(current_title)
+            else:
+                bucket.append(ln)
 
         if bucket:
             paragraphs.append(" ".join(bucket).strip())
@@ -123,20 +126,21 @@ class TextCleaner:
 
         return {"full_text": text['full_text'], "paragraphs": cleaned_paras}
 
-
+#用于测试
 if __name__ == "__main__":
     from pprint import pprint
 
     loader = DataLoader()
     text_c = TextCleaner()
 
-    sample_path = "/Users/chenjo/Desktop/UNSW/2025/9900/AI_Moule/data/raw/a1_z12_tutor.pdf"
+    sample_path = "/Users/chenjo/Desktop/UNSW/2025/9900/AI_Moule/data/raw/11.pdf"
 
     if os.path.exists(sample_path):
         record = loader.metadata_extraction(sample_path)
         text_recd = loader.load_file(sample_path)
         # print(text_recd)
         bc = text_c.process(text_recd)
-        print(bc)   # 打印出 assignment_id, student_id, prompt_id, response_path, response_text
+
+        print(bc['paragraphs'])   # 打印出 assignment_id, student_id, prompt_id, response_path, response_text
     else:
         print(f"[WARNing]")
