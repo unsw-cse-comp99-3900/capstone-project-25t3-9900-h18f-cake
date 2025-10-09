@@ -22,7 +22,7 @@ export default function CourseCard({
             aria-disabled={showDelete || showManage || undefined}
             sx={{
                 position: "relative",
-                width: { xs: 200, sm: 300, md: 400 },
+                width: { xs: 100, sm: 250, md: 320 },
                 p: { xs: 2, md: 3 },
                 bgcolor: "#eef3f8",
                 borderRadius: "18px",

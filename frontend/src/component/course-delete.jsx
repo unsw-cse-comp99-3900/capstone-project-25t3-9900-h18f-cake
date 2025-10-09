@@ -1,4 +1,3 @@
-// component/course-delete.jsx
 import {
     Dialog,
     DialogTitle,

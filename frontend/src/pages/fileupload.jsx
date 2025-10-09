@@ -6,6 +6,7 @@ import UploadStepper from "../component/upload-stepper";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { toast } from "sonner";
+import { useAuth } from "../context/auth-context";
 
 const STEP_LABELS = [
     "Step 1: Assignment Information",
@@ -21,6 +22,8 @@ function fileKey(f) {
 
 // set File Manager - <course> from query string param: "course"
 export default function MultiStepUpload() {
+    const { user, role } = useAuth();
+    const isLoggedIn = role !== null;
     const [searchParams] = useSearchParams();
     const [course, setCourse] = useState("");
     const [term, setTerm] = useState("");
@@ -34,6 +37,10 @@ export default function MultiStepUpload() {
         3: [],
     });
     const [activeStep, setActiveStep] = useState(0);
+
+    useEffect(() => {
+        if (!isLoggedIn) navigate("/");
+    }, [isLoggedIn]);
 
     useEffect(() => {
         const courseParam = searchParams.get("course");
@@ -125,6 +132,8 @@ export default function MultiStepUpload() {
 
     const onSubmit = () => {
         console.log("Submitting payload:", {
+            user,
+            role,
             course,
             assignmentName,
             term,
@@ -133,7 +142,7 @@ export default function MultiStepUpload() {
             step3: uploads[2].map((f) => f.name),
             step4: uploads[3].map((f) => f.name),
         });
-        toast.success(`Submitted assignment ${assignmentName} for ${course} ${term} successfully!`);
+        toast.success(`Role ${role} User ${user} has submitted assignment ${assignmentName} for ${course} ${term} successfully!`);
         navigate("/courses", { replace: true });
     };
 

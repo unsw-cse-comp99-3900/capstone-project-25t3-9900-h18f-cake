@@ -1,13 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Stack, Grid, Typography, IconButton } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
+import { useAuth } from "../context/auth-context";
+import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 // import InfoOutlined from "@mui/icons-material/InfoOutlined";
 import BuildCircleIcon from '@mui/icons-material/BuildCircle';
 import { toast } from "sonner";
 
-import CourseCard from "../component/course-card";   // ← use the single shared component
+import CourseCard from "../component/course-card";
 import CourseAdd from "../component/course-add";
 import CourseDelete from "../component/course-delete";
 import CourseManage from "../component/course-manage";
@@ -15,16 +17,21 @@ import CourseManage from "../component/course-manage";
 export default function CoursesPage() {
     const [termCourse, setTermCourse] = useState([
         { term: "2025 Term 3", code: "COMP9321", title: "Data Services Engineering", coordinator: "Jessie" },
-        { term: "2025 Term 1", code: "COMP9334", title: "Capacity Planning of Computer Systems and Networks", coordinator: "Jessie" },
-        { term: "2025 Term 1", code: "COMP9323", title: "Cloud Computing", coordinator: ["Jessie", "Peter"] },
-        { term: "2025 Term 1", code: "COMP9324", title: "Cloud Computing", coordinator: "Jessie" },
-        { term: "2025 Term 1", code: "COMP9325", title: "Cloud Computing", coordinator: "Jessie" },
-        { term: "2025 Term 1", code: "COMP9326", title: "Cloud Computing", coordinator: "Peter" },
-        { term: "2025 Term 1", code: "COMP9327", title: "Data Analytics", coordinator: "Jessie" },
+        { term: "2025 Term 2", code: "COMP9334", title: "Capacity Planning of Computer Systems and Networks", coordinator: "Jessie" },
+        { term: "2025 Term 2", code: "COMP9900", title: "Information Technology Project", coordinator: ["Jessie", "Peter"] },
+        { term: "2025 Term 3", code: "COMP9517", title: "Computer Vision", coordinator: "Jessie" },
+        { term: "2025 Term 3", code: "COMP9044", title: "Software Construction", coordinator: "Jessie" },
     ]);
-
     const navigate = useNavigate();
-    const isAdmin = true;
+
+    const { role, user, logout } = useAuth();
+    const isLoggedIn = role !== null;
+    const isAdmin = role === "admin";
+
+    useEffect(() => {
+        if (!isLoggedIn) navigate("/");
+    }, [isLoggedIn]);
+
     const [showDeleteCourse, setShowDeleteCourse] = useState(false);
     const [ShowManageCourse, setShowManageCourse] = useState(false);
     const [addCourse, setAddCourse] = useState(false);
@@ -42,20 +49,20 @@ export default function CoursesPage() {
         setTermCourse(prev => prev.filter(c => c.code !== pendingDelete.code));
         setConfirmOpen(false);
         setPendingDelete(null);
-        toast.success("Course deleted");
+        console.log(`Role: ${role} User: ${user} has successfully deleted Course ${pendingDelete.code}, ${pendingDelete.title}, ${pendingDelete.term} with coordinator(s): ${pendingDelete.coordinator.join(", ")}`);
     };
     const handleCancelDelete = () => { setConfirmOpen(false); setPendingDelete(null); };
 
     const handleConfirmManage = (newCourse) => {
         setTermCourse(prev => prev.map(c => c.code === newCourse.code ? newCourse : c));
         setManageOpen(false);
-        toast.success("Course updated");
+        setPendingManage(null);
+        console.log(`Role: ${role} User: ${user} has successfully updated Course ${newCourse.code}, ${newCourse.title}, ${newCourse.term} with coordinator(s): ${newCourse.coordinator.join(", ")}`);
     };
 
     const handleAddCourse = (newCourse) => {
         setTermCourse(prev => [...prev, newCourse]);
         setAddCourse(false);
-        toast.success("Course added");
     };
 
     const grouped = useMemo(() => {
@@ -69,7 +76,7 @@ export default function CoursesPage() {
     };
 
     return (
-        <Box sx={{ px: { xs: 4, md: 10 }, py: { xs: 6, md: 12 } }}>
+        <Box sx={{ px: { xs: 4, sm: 12, md: 25 }, py: { xs: 6, sm: 8,md: 10 } }}>
             {/* Header */}
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
                 <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: 28, md: 48 }, lineHeight: 1.1 }}>
@@ -111,6 +118,17 @@ export default function CoursesPage() {
                             >
                                 <BuildCircleIcon />
                             </IconButton>
+                            <IconButton
+                                sx={headerIconSx}
+                                aria-label="toggle delete mode"
+                                onClick={() => {
+                                    logout();
+                                    navigate("/");
+                                }}
+                            
+                            >
+                                <PowerSettingsNewIcon />
+                            </IconButton>
                         </>
                     )}
                 </Stack>
@@ -118,7 +136,7 @@ export default function CoursesPage() {
             </Stack>
 
             {/* Terms & cards */}
-            <Stack spacing={6}>
+            <Stack spacing={10}>
                 {Object.entries(grouped).map(([term, items]) => (
                     <Box key={term}>
                         <Typography variant="overline" sx={{ color: "grey.600", letterSpacing: ".12em", fontWeight: 800 }}>
@@ -127,7 +145,7 @@ export default function CoursesPage() {
 
                         <Grid container spacing={3} sx={{ mt: 1 }}>
                             {items.map((c) => (
-                                <Grid key={c.code} item xs={12} sm={6} md={4} sx={{ display: "flex" }}>
+                                <Box key={c.code} sx={{ display: "flex" }}>
                                     <CourseCard
                                         code={c.code}
                                         title={c.title}
@@ -137,18 +155,21 @@ export default function CoursesPage() {
                                         onManage={() => requestManage(c)}
                                         onOpen={() => {
                                             if (isAdmin) {
-                                                navigate(
-                                                    `/fileupload?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(c.term.replace(/\s+/g, ""))}`, { replace: true }
-                                                );
+                                                toast.error("wait for peng to do some thing You don't have permission to upload files.");
                                             } else {
-                                                // Non-admin user: block navigation or show message
-                                                toast.error("You don't have permission to upload files.");
+                                                navigate(
+                                                    `/fileupload?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(
+                                                        c.term.replace(/\s+/g, "")
+                                                    )}`,
+                                                    { replace: true }
+                                                );
                                             }
                                         }}
                                     />
-                                </Grid>
+                                </Box>
                             ))}
                         </Grid>
+
 
                     </Box>
                 ))}
@@ -172,6 +193,7 @@ export default function CoursesPage() {
                 onSave={handleConfirmManage}
                 course={pendingManage}
             />
+
         </Box>
     );
 }
