@@ -155,7 +155,7 @@ export default function CoursesPage() {
                                         onManage={() => requestManage(c)}
                                         onOpen={() => {
                                             if (isAdmin) {
-                                                toast.error("wait for peng to do some thing You don't have permission to upload files.");
+                                                toast.error("wait for peng to do some thing - User, you don't have permission to view the output.");
                                             } else {
                                                 navigate(
                                                     `/fileupload?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(
