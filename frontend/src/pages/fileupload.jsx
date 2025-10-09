@@ -24,6 +24,7 @@ function fileKey(f) {
 export default function MultiStepUpload() {
     const { user, role } = useAuth();
     const isLoggedIn = role !== null;
+    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [course, setCourse] = useState("");
     const [term, setTerm] = useState("");
@@ -40,7 +41,7 @@ export default function MultiStepUpload() {
 
     useEffect(() => {
         if (!isLoggedIn) navigate("/");
-    }, [isLoggedIn]);
+    }, [isLoggedIn, navigate]);
 
     useEffect(() => {
         const courseParam = searchParams.get("course");
@@ -119,8 +120,6 @@ export default function MultiStepUpload() {
             setActiveStep((s) => s + 1);
         }
     };
-
-    const navigate = useNavigate();
 
     const onPrev = () => {
         if (activeStep === 0) {

@@ -30,7 +30,7 @@ export default function CoursesPage() {
 
     useEffect(() => {
         if (!isLoggedIn) navigate("/");
-    }, [isLoggedIn]);
+    }, [isLoggedIn, navigate]);
 
     const [showDeleteCourse, setShowDeleteCourse] = useState(false);
     const [ShowManageCourse, setShowManageCourse] = useState(false);
