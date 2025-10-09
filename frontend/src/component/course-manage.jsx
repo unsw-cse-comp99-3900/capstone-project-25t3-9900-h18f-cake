@@ -11,7 +11,7 @@ export default function CourseManage({
     onSave,
     course,
 }) {
-    const coordinatorOptions = ["Jessie", "Peter", "Andrew", "Basem", "Khalegh"];
+    const coordinatorOptions = ["Mingxia", "Peng", "Moran", "Ruipeng", "Jiahao", "Adrian"];
 
     // normalise incoming coordinators (string | string[] | undefined) -> string[]
     const normalizeCoordinators = (c) => {

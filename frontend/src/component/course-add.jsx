@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useAuth } from "../context/auth-context";
+
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Button, TextField, MenuItem, Typography, Box, Chip
@@ -8,6 +10,7 @@ import { toast } from "sonner";
 export default function CourseAdd({ open, onClose, onAdd }) {
     const coordinatorOptions = ["Jessie", "Peter", "Andrew", "Basem", "Khalegh"];
 
+    const { role, user } = useAuth();
     const [code, setCode] = useState("");
     const [title, setTitle] = useState("");
     const [year, setYear] = useState("");
@@ -44,9 +47,11 @@ export default function CourseAdd({ open, onClose, onAdd }) {
         if (Object.keys(newErrors).length > 0) return;
 
         const newCourse = { code, title, year, term, coordinators }
-        console.log(newCourse);
+        console.log(
+            `Role: ${role} User: ${user} has successfully added Course ${code}, ${title}, ${year}, ${term} with coordinator(s): ${coordinators.join(", ")}`
+        );
         toast.success(
-            `Course ${code}, ${title}, ${year}, ${term} added with coordinator(s): ${coordinators.join(", ")}`
+            `Role: ${role} User: ${user} has successfully added Course ${code}, ${title}, ${year}, ${term} with coordinator(s): ${coordinators.join(", ")}`
         );
 
         onAdd?.(newCourse);
