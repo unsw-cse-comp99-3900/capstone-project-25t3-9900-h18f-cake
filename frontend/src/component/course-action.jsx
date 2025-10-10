@@ -1,7 +1,7 @@
 
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography } from "@mui/material";
 
-export function CourseActionDialog({ open, course, onClose, onUpload, onView }) {
+export default function CourseActionDialog({ open, course, onClose, onUpload, onView }) {
     const term = course?.term || course?.year_term || "";
 
     return (
@@ -28,7 +28,7 @@ export function CourseActionDialog({ open, course, onClose, onUpload, onView }) 
 
             <DialogContent sx={{ pt: 3, pb: 3, px: 4 }}>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 5, mt: 2 }}>
-                    {course ? `${course.code} — ${course.title} (${term || "No term"})` : ""}
+                    {course ? `${term} ${course.code} ${course.title} ` : ""}
                 </Typography>
 
                 <Stack spacing={2}>
@@ -39,22 +39,22 @@ export function CourseActionDialog({ open, course, onClose, onUpload, onView }) 
                         sx={{
                             borderRadius: 2,
                             textTransform: "none",
-                            width: "50%",
+                            width: "70%",
                             alignSelf: "center",
                             py: 1.2,
                             px: 3,
                             fontSize: 16,
-                            bgcolor: "grey.200",               // same background
+                            bgcolor: "grey.200",               
                             color: "grey.900",
                             transition: "background-color 0.2s ease",
-                            "&:hover": { bgcolor: "grey.300" } // same hover tone
+                            "&:hover": { bgcolor: "grey.300" } 
                         }}
                     >
-                        File Upload
+                        Upload an assignment
                     </Button>
 
                     <Button
-                        variant="contained"                 // 👈 same variant now
+                        variant="contained"                 
                         size="large"
                         onClick={onView}
                         sx={{
@@ -62,7 +62,7 @@ export function CourseActionDialog({ open, course, onClose, onUpload, onView }) 
                             textTransform: "none",
                             py: 1.2,
                             px: 3,
-                            width: "50%",
+                            width: "70%",
                             alignSelf: "center",
                             fontSize: 16,
                             bgcolor: "grey.200",
@@ -71,7 +71,7 @@ export function CourseActionDialog({ open, course, onClose, onUpload, onView }) 
                             "&:hover": { bgcolor: "grey.300" }
                         }}
                     >
-                        View assignment
+                        View AI-generated grades
                     </Button>
 
 
