@@ -176,7 +176,7 @@ export default function MultiStepUpload() {
                 <Stack spacing={2}>
                     <Box>
                         <Typography variant="h4" sx={{ fontWeight: 700, mb: 10 }}>
-                            File Manager - {term ? term : "No term selected"} {course ? course : "No course selected"}
+                            Upload Assignment - {term ? term : "No term selected"} {course ? course : "No course selected"}
                         </Typography>
                     </Box>
 
