@@ -7,7 +7,8 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { toast } from "sonner";
 import { useAuth } from "../context/auth-context";
-import { API_URL } from "../const";
+import { API_URL } from "../common/const";
+import { handleFetch } from "../common/utils";
 
 const STEP_LABELS = [
     "Step 1: Assignment Information",
@@ -137,7 +138,7 @@ export default function MultiStepUpload() {
 
     const onSubmit = () => {
         // API sync request to backend
-        fetch(`${API_URL}/v1/assignments`, {
+        handleFetch(`${API_URL}/v1/assignments`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
