@@ -7,6 +7,7 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { toast } from "sonner";
 import { useAuth } from "../context/auth-context";
+import { API_URL } from "../const";
 
 const STEP_LABELS = [
     "Step 1: Assignment Information",
@@ -135,20 +136,48 @@ export default function MultiStepUpload() {
     };
 
     const onSubmit = () => {
-        console.log("Submitting payload:", {
-            user,
-            course,
-            assignmentName,
-            term,
-            step1: uploads[0].map((f) => f.name),
-            step2: uploads[1].map((f) => f.name),
-            step3: uploads[2].map((f) => f.name),
-            step4: uploads[3].map((f) => f.name),
-            step5: uploads[4].map((f) => f.name),
-            step6: uploads[5].map((f) => f.name),
+        // API sync request to backend
+        fetch(`${API_URL}/v1/assignments`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                user,
+                course,
+                assignmentName,
+                term,
+                step1: uploads[0].map((f) => f.name),
+                step2: uploads[1].map((f) => f.name),
+                step3: uploads[2].map((f) => f.name),
+                step4: uploads[3].map((f) => f.name),
+                step5: uploads[4].map((f) => f.name),
+                step6: uploads[5].map((f) => f.name),
+            }),
+        }).then((result) => {
+            if (result.ok) {
+                toast.success(`User ${user} has submitted assignment ${assignmentName} for ${course} ${term} successfully!`);
+                navigate("/courses", { replace: true });
+                console.log("Submitting payload:", {
+                    user,
+                    course,
+                    assignmentName,
+                    term,
+                    step1: uploads[0].map((f) => f.name),
+                    step2: uploads[1].map((f) => f.name),
+                    step3: uploads[2].map((f) => f.name),
+                    step4: uploads[3].map((f) => f.name),
+                    step5: uploads[4].map((f) => f.name),
+                    step6: uploads[5].map((f) => f.name),
+                });
+            } else {
+                toast.error(`Failed to submit assignment: ${result.statusText}`);
+                console.log(`Failed to submit assignment: ${result.statusText}`);
+            }
+        }).catch((error) => {
+            toast.error(`Failed to submit assignment: ${error}`);
+            console.log(`Failed to submit assignment: ${error}`);
         });
-        toast.success(`User ${user} has submitted assignment ${assignmentName} for ${course} ${term} successfully!`);
-        navigate("/courses", { replace: true });
     };
 
     return (
