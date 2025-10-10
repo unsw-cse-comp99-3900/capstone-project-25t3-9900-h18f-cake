@@ -1,6 +1,6 @@
 import { API_URL } from "./const";
 
-const USE_DUMMY_DATA = true;
+const USE_DUMMY_DATA = false;
 
 const courseData = [
     { year_term: "2025 Term 3", code: "COMP9321", title: "Data Services Engineering" },
