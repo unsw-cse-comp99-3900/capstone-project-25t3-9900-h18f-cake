@@ -11,8 +11,10 @@ import { useAuth } from "../context/auth-context";
 const STEP_LABELS = [
     "Step 1: Assignment Information",
     "Step 2: Marking Guidelines",
-    "Step 3: Coordinator Marked Assignments",
-    "Step 4: Tutor Marked Assignments",
+    "Step 3: Assignment Marked by Coordinator",
+    "Step 4: Score Marked by Coordinator",
+    "Step 5: Assignment Marked by Tutor",
+    "Step 6: Score Marked by Tutor",
     "Review & Submit",
 ];
 
@@ -22,8 +24,8 @@ function fileKey(f) {
 
 // set File Manager - <course> from query string param: "course"
 export default function MultiStepUpload() {
-    const { user, role } = useAuth();
-    const isLoggedIn = role !== null;
+    const { user } = useAuth();
+    const isLoggedIn = user !== null;
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [course, setCourse] = useState("");
@@ -36,6 +38,9 @@ export default function MultiStepUpload() {
         1: [],
         2: [],
         3: [],
+        4: [],
+        5: [],
+        6: [],
     });
     const [activeStep, setActiveStep] = useState(0);
 
@@ -132,7 +137,6 @@ export default function MultiStepUpload() {
     const onSubmit = () => {
         console.log("Submitting payload:", {
             user,
-            role,
             course,
             assignmentName,
             term,
@@ -140,17 +144,27 @@ export default function MultiStepUpload() {
             step2: uploads[1].map((f) => f.name),
             step3: uploads[2].map((f) => f.name),
             step4: uploads[3].map((f) => f.name),
+            step5: uploads[4].map((f) => f.name),
+            step6: uploads[5].map((f) => f.name),
         });
-        toast.success(`Role ${role} User ${user} has submitted assignment ${assignmentName} for ${course} ${term} successfully!`);
+        toast.success(`User ${user} has submitted assignment ${assignmentName} for ${course} ${term} successfully!`);
         navigate("/courses", { replace: true });
     };
 
     return (
-        <Box sx={{ minHeight: "100svh", display: "grid", placeItems: "center", p: 2, bgcolor: "grey.100" }}>
+        <Box
+            sx={{
+                minHeight: "100svh",
+                display: "grid",
+                placeItems: "center",
+                px: { xs: 2, sm: 4, md: 8 },
+                bgcolor: "grey.100",
+            }}
+        >
             <Paper
                 elevation={0}
                 sx={{
-                    width: { xs: "100%", sm: "90%", md: "900px" },
+                    width: { xs: "100%", sm: "90%", md: "1200px" },
                     p: 3,
                     borderRadius: "12px",
                     border: "1px solid",
@@ -161,8 +175,8 @@ export default function MultiStepUpload() {
             >
                 <Stack spacing={2}>
                     <Box>
-                        <Typography variant="h4" sx={{ fontWeight: 500, mb: 5 }}>
-                            File Manager - {term ? term : "No term selected"} {course ? course : "No course selected"}
+                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 10 }}>
+                            Upload Assignment - {term ? term : "No term selected"} {course ? course : "No course selected"}
                         </Typography>
                     </Box>
 
@@ -221,14 +235,14 @@ export default function MultiStepUpload() {
 
                     {activeStep === 2 && (
                         <Section
-                            title="Upload Coordinator Marked Assignments"
+                            title="Upload Assignment Marked by Coordinator"
                             body={
                                 <>
                                     <UploadBox
                                         onUpload={handleUpload(2)}
                                         accept="*"
                                         multiple
-                                        title="Coordinator Marked Assignments"
+                                        title="Assignment Marked by Coordinator"
                                         hint="Drag & drop files here, or"
                                     />
                                     <FileList files={uploads[2]} onRemove={(key) => removeFile(2, key)} />
@@ -239,14 +253,14 @@ export default function MultiStepUpload() {
 
                     {activeStep === 3 && (
                         <Section
-                            title="Upload Tutor Marked Assignments"
+                            title="Upload Score Marked by Coordinator"
                             body={
                                 <>
                                     <UploadBox
                                         onUpload={handleUpload(3)}
                                         accept="*"
                                         multiple
-                                        title="Tutor Marked Assignments"
+                                        title="Score Marked by Coordinator"
                                         hint="Drag & drop files here, or"
                                     />
                                     <FileList files={uploads[3]} onRemove={(key) => removeFile(3, key)} />
@@ -254,8 +268,43 @@ export default function MultiStepUpload() {
                             }
                         />
                     )}
+                    {activeStep === 4 && (
+                        <Section
+                            title="Upload Assignment Marked by Tutor"
+                            body={
+                                <>
+                                    <UploadBox
+                                        onUpload={handleUpload(4)}
+                                        accept="*"
+                                        multiple
+                                        title="Assignment Marked by Tutor"
+                                        hint="Drag & drop files here, or"
+                                    />
+                                    <FileList files={uploads[4]} onRemove={(key) => removeFile(4, key)} />
+                                </>
+                            }
+                        />
+                    )}
 
-                    {activeStep === 4 && <ReviewSection uploads={uploads} assignmentName={assignmentName} />}
+                    {activeStep === 5 && (
+                        <Section
+                            title="Upload Score Marked by Tutor"
+                            body={
+                                <>
+                                    <UploadBox
+                                        onUpload={handleUpload(5)}
+                                        accept="*"
+                                        multiple
+                                        title="Score Marked by Tutor"
+                                        hint="Drag & drop files here, or"
+                                    />
+                                    <FileList files={uploads[5]} onRemove={(key) => removeFile(5, key)} />
+                                </>
+                            }
+                        />
+                    )}
+
+                    {activeStep === 6 && <ReviewSection uploads={uploads} assignmentName={assignmentName} />}
 
                     {/* Navigation */}
                     <Stack direction="row" spacing={1.5} justifyContent="space-between" sx={{ pt: 1 }}>
@@ -463,8 +512,10 @@ function ReviewSection({ uploads, assignmentName }) {
                 {renderList(1, "Marking Guidelines")}
 
                 {/* Show numbers only for Coordinator & Tutor */}
-                {renderCount(2, "Coordinator Marked Assignments")}
-                {renderCount(3, "Tutor Marked Assignments")}
+                {renderCount(2, "Assignment Marked by Coordinator")}
+                {renderCount(3, "Score Marked by Coordinator")}
+                {renderCount(4, "Assignment Marked by Tutor")}
+                {renderCount(5, "Score Marked by Tutor")}
             </Stack>
         </Box>
     );

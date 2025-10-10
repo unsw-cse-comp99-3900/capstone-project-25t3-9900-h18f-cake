@@ -1,38 +1,35 @@
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    Typography,
-} from "@mui/material";
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
 
-export default function CourseDelete({ open, onClose, onDelete, course }) {
+export default function ExitConfirmPopup({ logoutOpen, setLogoutOpen, logout, navigate }) {
+
+    const handleConfirm = () => {
+        logout();
+        navigate("/");
+        setLogoutOpen(false);
+    };
+
     return (
         <Dialog
-            open={open}
-            onClose={onClose}
+            open={logoutOpen}
+            onClose={() => setLogoutOpen(false)}
             fullWidth
             maxWidth="xs"
             slotProps={{
                 paper: {
                     sx: { borderRadius: "12px", backgroundColor: "#fff" },
                 },
-            }}
-        >
-            <DialogTitle sx={{ fontWeight: 700 }}>Delete course?</DialogTitle>
+            }}>
+            <DialogTitle sx={{ fontWeight: 700 }}>Logout?</DialogTitle>
 
             <DialogContent dividers>
                 <Typography variant="body2" color="text.secondary">
-                    {course
-                        ? `Are you sure you want to delete ${course.code} — ${course.title}?`
-                        : "Are you sure you want to delete this course?"}
+                    Are you sure you want to logout?
                 </Typography>
             </DialogContent>
 
-            <DialogActions sx={{ p: 2 }}>
+            <DialogActions>
                 <Button
-                    onClick={onClose}
+                    onClick={() => setLogoutOpen(false)}
                     variant="contained"
                     sx={{
                         backgroundColor: "grey.800",
@@ -46,10 +43,10 @@ export default function CourseDelete({ open, onClose, onDelete, course }) {
                 <Button
                     variant="contained"
                     color="error"
-                    onClick={onDelete}
+                    onClick={handleConfirm}
                     sx={{ borderRadius: "12px", textTransform: "none" }}
                 >
-                    Delete
+                    Logout
                 </Button>
             </DialogActions>
         </Dialog>
