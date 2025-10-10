@@ -33,7 +33,7 @@ export default function CourseDelete({ open, onClose, onDelete, course }) {
             <DialogActions sx={{ p: 2 }}>
                 <Button
                     onClick={onClose}
-                                        variant="contained"
+                    variant="contained"
                     sx={{
                         backgroundColor: "grey.800",
                         "&:hover": { backgroundColor: "grey.300" },

@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Stack, Grid, Typography, IconButton } from "@mui/material";
+import { useAuth } from "../context/auth-context";
+import { Box, Stack, Grid, IconButton, Typography } from "@mui/material";
+
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
-import { useAuth } from "../context/auth-context";
-// import BuildCircleIcon from '@mui/icons-material/BuildCircle';
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 
 import CourseCard from "../component/course-card";
 import CourseAdd from "../component/course-add";
 import CourseDelete from "../component/course-delete";
+import CourseActionDialog from "../component/course-action";
+import ExitConfirmPopup from "../component/exit-confirm";   
+// import BuildCircleIcon from '@mui/icons-material/BuildCircle';
 // import CourseManage from "../component/course-manage";
-import { CourseActionDialog } from "../component/course-action";
 
 export default function CoursesPage() {
     const [termCourse, setTermCourse] = useState([
@@ -38,6 +40,8 @@ export default function CoursesPage() {
     // const [manageOpen, setManageOpen] = useState(false);
     const [pendingDelete, setPendingDelete] = useState(null); // { term, code, title }
     // const [pendingManage, setPendingManage] = useState(null); // { term, code, title }
+
+    const [logoutOpen, setLogoutOpen] = useState(false);
 
     const requestDelete = (course) => { setPendingDelete(course); setConfirmOpen(true); };
     // const requestManage = (course) => { setPendingManage(course); setManageOpen(true); };
@@ -153,8 +157,10 @@ export default function CoursesPage() {
                             sx={headerIconSx}
                             aria-label="toggle delete mode"
                             onClick={() => {
-                                logout();
-                                navigate("/");
+                                setShowDeleteCourse(false);
+                                setShowManageCourse(false);
+                                setLogoutOpen(true);
+
                             }}
 
                         >
@@ -183,15 +189,8 @@ export default function CoursesPage() {
                                         showDelete={showDeleteCourse}
                                         showManage={ShowManageCourse}
                                         onDelete={() => requestDelete(c)}
-                                        // onManage={() => requestManage(c)}
                                         onOpen={() => {
                                             openActions(c);
-                                            // navigate(
-                                            //     `/fileupload?course=${encodeURIComponent(c.code)}&year_term=${encodeURIComponent(
-                                            //         c.year_term.replace(/\s+/g, "")
-                                            //     )}`,
-                                            //     { replace: true }
-                                            // );
                                         }}
                                     />
                                 </Box>
@@ -223,12 +222,19 @@ export default function CoursesPage() {
                 course={pendingManage}
             /> */}
             <CourseActionDialog
-                    open={dialogOpen}
-                    course={selectedCourse}
-                    onClose={closeActions}
-                    onUpload={goUpload}
-                    onView={goView}
-                />
+                open={dialogOpen}
+                course={selectedCourse}
+                onClose={closeActions}
+                onUpload={goUpload}
+                onView={goView}
+            />
+
+            <ExitConfirmPopup 
+                logoutOpen={logoutOpen} 
+                setLogoutOpen={setLogoutOpen} 
+                logout={logout} 
+                navigate={navigate}
+            />
         </Box>
     );
 }
