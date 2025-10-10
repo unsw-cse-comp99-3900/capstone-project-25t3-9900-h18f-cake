@@ -22,7 +22,7 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
             }}
         >
 
-            <DialogTitle sx={{ fontWeight: 800, bgcolor: "grey.100", borderBottom: 1, borderColor: "grey.200" }}>
+            <DialogTitle sx={{ fontWeight: 800,  borderBottom: 1, borderColor: "grey.200", bgcolor: "#eef3f8"}}>
                 Choose an action
             </DialogTitle>
 
@@ -73,13 +73,11 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                     >
                         View AI-generated grades
                     </Button>
-
-
                 </Stack>
             </DialogContent>
 
 
-            <DialogActions sx={{ bgcolor: "grey.200", borderTop: 1, borderColor: "grey.200" }}>
+            <DialogActions sx={{ backgroundColor: "#f0f0f0", borderTop: 1, borderColor: "grey.200" }}>
                 <Button 
                     onClick={onClose} 
                     variant="contained" 
