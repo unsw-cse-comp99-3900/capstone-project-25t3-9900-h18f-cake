@@ -7,6 +7,7 @@ import {
     // Box, Chip
 } from "@mui/material";
 import { toast } from "sonner";
+import { API_URL } from "../const";
 
 export default function CourseAdd({ open, onClose, onAdd }) {
 
@@ -41,22 +42,28 @@ export default function CourseAdd({ open, onClose, onAdd }) {
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) return;
 
-        // ✅ Normalize casing and ensure "T1" → "Term 1"
+        // Normalize casing and ensure "T1" → "Term 1"
         const formattedTerm = term.trim().replace(/^T/i, "Term ");
         const year_term = `${year.trim()} ${formattedTerm}`;
-
         const newCourse = { year_term, code: code.trim(), title: title.trim() };
-
         const who = user?.email || user?.name || "Unknown user";
 
-        console.log(
-            `User: ${who} has successfully added course ${code}, ${title}, ${year_term}`
-        );
-
-        toast.success(
-            `Added ${code} — ${title} (${year_term}) successfully!`
-        );
-
+        // API sync request to backend
+        fetch(`${API_URL}/v1/courses`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newCourse),
+        }).then((result) => {
+            if (result.ok) {
+                console.log(`User: ${who} has successfully added course ${code}, ${title}, ${year_term}`);
+                toast.success(`Added ${code} — ${title} (${year_term}) successfully!`);
+            } else {
+                console.log(`Failed to add course: ${result.statusText}`);
+                toast.error(`Failed to add course: ${result.statusText}`);
+            }
+        })
         onAdd?.(newCourse);
         resetForm();
     };
