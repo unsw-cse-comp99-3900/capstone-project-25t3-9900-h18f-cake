@@ -3,28 +3,26 @@ import { useAuth } from "../context/auth-context";
 
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, TextField, MenuItem, Typography, Box, Chip
+    Button, TextField, MenuItem, Typography,
+    // Box, Chip
 } from "@mui/material";
 import { toast } from "sonner";
 
 export default function CourseAdd({ open, onClose, onAdd }) {
-    const coordinatorOptions = ["Jessie", "Peter", "Andrew", "Basem", "Khalegh"];
 
-    const { role, user } = useAuth();
+    const { user } = useAuth();
     const [code, setCode] = useState("");
     const [title, setTitle] = useState("");
     const [year, setYear] = useState("");
     const [term, setTerm] = useState("");
-    const [coordinators, setCoordinators] = useState([]); // always array
     const [errors, setErrors] = useState({});
-    const [menuOpen, setMenuOpen] = useState(false);
+    // const [menuOpen, setMenuOpen] = useState(false);
 
     const resetForm = () => {
         setCode("");
         setTitle("");
         setYear("");
         setTerm("");
-        setCoordinators([]);
         setErrors({});
     };
 
@@ -39,24 +37,30 @@ export default function CourseAdd({ open, onClose, onAdd }) {
         if (!title.trim()) newErrors.title = "Course title is required";
         if (!year.trim()) newErrors.year = "Year is required";
         if (!term.trim()) newErrors.term = "Term is required";
-        if (!coordinators || coordinators.length === 0) {
-            newErrors.coordinators = "At least one coordinator is required";
-        }
 
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) return;
 
-        const newCourse = { code, title, year, term, coordinators }
+        // ✅ Normalize casing and ensure "T1" → "Term 1"
+        const formattedTerm = term.trim().replace(/^T/i, "Term ");
+        const year_term = `${year.trim()} ${formattedTerm}`;
+
+        const newCourse = { year_term, code: code.trim(), title: title.trim() };
+
+        const who = user?.email || user?.name || "Unknown user";
+
         console.log(
-            `Role: ${role} User: ${user} has successfully added Course ${code}, ${title}, ${year}, ${term} with coordinator(s): ${coordinators.join(", ")}`
+            `User: ${who} has successfully added course ${code}, ${title}, ${year_term}`
         );
+
         toast.success(
-            `Role: ${role} User: ${user} has successfully added Course ${code}, ${title}, ${year}, ${term} with coordinator(s): ${coordinators.join(", ")}`
+            `Added ${code} — ${title} (${year_term}) successfully!`
         );
 
         onAdd?.(newCourse);
-        resetForm();       // clear on save as well
+        resetForm();
     };
+
 
     return (
         <Dialog
@@ -152,61 +156,6 @@ export default function CourseAdd({ open, onClose, onAdd }) {
                     <MenuItem value="Summer">Summer Term</MenuItem>
                 </TextField>
 
-                <TextField
-                    margin="normal"
-                    select
-                    fullWidth
-                    // remove root value; we control it in slotProps.select
-                    error={!!errors.coordinators}
-                    helperText={errors.coordinators}
-                    sx={{
-                        mt: 2,
-                        backgroundColor: "white",
-                        borderRadius: "12px",
-                        "& .MuiOutlinedInput-root": { borderRadius: "12px" },
-                    }}
-                    slotProps={{
-                        select: {
-                            multiple: true,
-                            open: menuOpen,
-                            onOpen: () => setMenuOpen(true),
-                            onClose: () => setMenuOpen(false),
-
-                            value: coordinators ?? [],
-                            onChange: (e) => {
-                                const val = e.target.value;
-                                const next = Array.isArray(val)
-                                    ? val
-                                    : String(val).split(",").filter(Boolean);
-                                setCoordinators(next);
-                                setMenuOpen(false); // <-- close after pick
-                            },
-
-                            displayEmpty: true,
-                            renderValue: (selected) =>
-                                selected.length === 0 ? (
-                                    <span style={{ color: "rgba(0,0,0,0.38)" }}>
-                                        Select coordinators…
-                                    </span>
-                                ) : (
-                                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                                        {selected.map((name) => (
-                                            <Chip key={name} label={name} />
-                                        ))}
-                                    </Box>
-                                ),
-
-                            MenuProps: { PaperProps: { sx: { maxHeight: 200 } } },
-                        },
-                    }}
-                >
-                    {coordinatorOptions.map((name) => (
-                        <MenuItem key={name} value={name}>
-                            {name}
-                        </MenuItem>
-                    ))}
-                </TextField>
-
 
 
             </DialogContent>
@@ -216,7 +165,7 @@ export default function CourseAdd({ open, onClose, onAdd }) {
                     variant="contained"
                     sx={{
                         backgroundColor: "grey.800",
-                        "&:hover": { backgroundColor: "grey.900" },
+                        "&:hover": { backgroundColor: "grey.300" },
                         borderRadius: "12px",
                         textTransform: "none",
                     }}
@@ -228,7 +177,7 @@ export default function CourseAdd({ open, onClose, onAdd }) {
                     variant="contained"
                     sx={{
                         backgroundColor: "grey.800",
-                        "&:hover": { backgroundColor: "grey.900" },
+                        "&:hover": { backgroundColor: "grey.300" },
                         borderRadius: "12px",
                         textTransform: "none",
                     }}
