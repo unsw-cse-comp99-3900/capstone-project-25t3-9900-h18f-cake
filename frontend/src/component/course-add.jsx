@@ -7,7 +7,8 @@ import {
     // Box, Chip
 } from "@mui/material";
 import { toast } from "sonner";
-import { API_URL } from "../const";
+import { API_URL } from "../common/const";
+import { handleFetch } from "../common/utils";
 
 export default function CourseAdd({ open, onClose, onAdd }) {
 
@@ -49,7 +50,7 @@ export default function CourseAdd({ open, onClose, onAdd }) {
         const who = user?.email || user?.name || "Unknown user";
 
         // API sync request to backend
-        fetch(`${API_URL}/v1/courses`, {
+        handleFetch(`${API_URL}/v1/courses`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
