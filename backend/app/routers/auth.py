@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from fastapi import UploadFile, HTTPException
+from fastapi import APIRouter
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -10,6 +11,16 @@ def _assert_allowed(filename: str):
     ext = filename.rsplit(".", 1)[-1].lower()
     if ext not in ALLOWED:
         raise HTTPException(status_code=400, detail=f"Unsupported extension: .{ext}")
+
+
+router = APIRouter(
+    prefix="/auth",
+    tags=["Auth"]
+)
+@router.get("/test")
+async def test_auth():
+    return {"message": "Auth router is working!"}
+
 
 async def save_upload(file: UploadFile, subdir: str = "") -> str:
     _assert_allowed(file.filename)
