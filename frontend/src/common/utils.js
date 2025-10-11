@@ -15,13 +15,13 @@ export function handleFetch(url, options) {
         if (url === `${API_URL}/v1/courses` && options.method === "GET") {
             return new Promise((resolve) => {
                 setTimeout(() => {
-                    resolve({ ok: true, json: () => courseData });
+                    resolve({ ok: true, json: () => Promise.resolve(courseData) });
                 }, 0); // artificial timer, set to zero for now
             });
         }
         return new Promise((resolve) => {
             setTimeout(() => {
-                resolve({ ok: true });
+                resolve({ ok: true, json: () => Promise.resolve({ message: "Dummy success" }) });
             }, 0);
         });
     }
