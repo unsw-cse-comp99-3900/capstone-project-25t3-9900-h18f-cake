@@ -22,17 +22,21 @@ import { handleFetch } from "../common/utils";
 export default function CoursesPage() {
     // API sync request to backend
     const [termCourse, setTermCourse] = useState([]);
-    handleFetch(`${API_URL}/v1/courses`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-        },
-    }).then(response => response.json()).then(data => {
-        setTermCourse(data);
-        console.log("Successfully fetched data:", data);
-    }).catch(error => {
-        console.error("Error fetching data:", error);
-    });
+
+    useEffect(() => {
+        // API sync request to backend
+        handleFetch(`${API_URL}/v1/courses`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        }).then(response => response.json()).then(data => {
+            setTermCourse(data);
+            console.log("Successfully fetched data:", data);
+        }).catch(error => {
+            console.error("Error fetching data:", error);
+        });
+    }, []);
 
     const navigate = useNavigate();
 
