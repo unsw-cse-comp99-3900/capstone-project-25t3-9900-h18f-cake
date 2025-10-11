@@ -81,7 +81,7 @@ export default function MultiStepUpload() {
         });
     };
 
-    // require at least one file for steps 0..3; review is index 4
+    // require at least one file for steps 0..5; review is index 6
     const canGoNext = useMemo(() => {
         const isReview = activeStep === STEP_LABELS.length - 1; // 4
         if (isReview) return true;
