@@ -34,7 +34,7 @@ export default function MultiStepUpload() {
     const [term, setTerm] = useState("");
     const [assignmentName, setAssignmentName] = useState("");
 
-    // 4 upload steps => indices 0..3
+    // 6 upload steps => indices 0..5
     const [uploads, setUploads] = useState({
         0: [],
         1: [],
@@ -62,15 +62,29 @@ export default function MultiStepUpload() {
         }
     }, [searchParams]);
 
-    const handleUpload = (stepIndex) => (newFiles) => {
-        setUploads((prev) => {
-            const next = { ...prev };
-            next[stepIndex] = [...newFiles, ...prev[stepIndex]];
-            return next;
-        });
-        toast.success(
-            `Added ${newFiles.length} file${newFiles.length > 1 ? "s" : ""} to ${STEP_LABELS[stepIndex]}`
-        );
+
+    // needs to fix to upload the files.
+    const handleUpload = (stepIndex) => async (newFiles) => {
+        try {
+            // Update UI state immediately
+            setUploads((prev) => {
+                const next = { ...prev };
+                next[stepIndex] = [...newFiles, ...prev[stepIndex]];
+                return next;
+            });
+
+            // // 🔥 Upload each file to backend
+            // for (const file of newFiles) {
+            //     const result = await uploadFileToBackend(file);
+            //     console.log("Uploaded:", result.file_url); // You can store this in DB or map
+            // }
+
+            toast.success(
+                `Uploaded ${newFiles.length} file${newFiles.length > 1 ? "s" : ""} to ${STEP_LABELS[stepIndex]}`
+            );
+        } catch (err) {
+            toast.error("Upload failed");
+        }
     };
 
     const removeFile = (stepIndex, key) => {
@@ -79,6 +93,7 @@ export default function MultiStepUpload() {
             next[stepIndex] = prev[stepIndex].filter((f) => fileKey(f) !== key);
             return next;
         });
+
     };
 
     // require at least one file for steps 0..5; review is index 6
