@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, courses, assignments, submissions
+from app.routers import auth, courses, assignments, submissions
 
 app = FastAPI(title="Grader Backend (Poetry no-AI)", version="0.1.0")
 
