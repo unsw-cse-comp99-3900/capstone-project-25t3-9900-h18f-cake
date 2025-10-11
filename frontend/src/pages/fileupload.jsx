@@ -63,7 +63,7 @@ export default function MultiStepUpload() {
     }, [searchParams]);
 
 
-    // needs to fix to upload the files.
+    // needs to fix to upload the files - API endpoint to be added.
     const handleUpload = (stepIndex) => async (newFiles) => {
         try {
             // Update UI state immediately
