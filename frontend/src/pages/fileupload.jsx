@@ -62,7 +62,6 @@ export default function MultiStepUpload() {
         }
     }, [searchParams]);
 
-
     // needs to fix to upload the files - API endpoint to be added.
     const handleUpload = (stepIndex) => async (newFiles) => {
         try {
@@ -72,12 +71,6 @@ export default function MultiStepUpload() {
                 next[stepIndex] = [...newFiles, ...prev[stepIndex]];
                 return next;
             });
-
-            // // 🔥 Upload each file to backend
-            // for (const file of newFiles) {
-            //     const result = await uploadFileToBackend(file);
-            //     console.log("Uploaded:", result.file_url); // You can store this in DB or map
-            // }
 
             toast.success(
                 `Uploaded ${newFiles.length} file${newFiles.length > 1 ? "s" : ""} to ${STEP_LABELS[stepIndex]}`
@@ -129,7 +122,6 @@ export default function MultiStepUpload() {
                             (f.type && f.type.toLowerCase() === "application/pdf") ||
                             /\.pdf$/i.test(f.name)
                     );
-
                     if (!hasName && !hasPdf) msg = "Enter an assignment name and upload at least one PDF.";
                     else if (!hasName) msg = "Please enter the assignment name.";
                     else if (!hasPdf) msg = "Please upload at least one PDF file.";
@@ -151,50 +143,41 @@ export default function MultiStepUpload() {
         }
     };
 
-    const onSubmit = () => {
-        // API sync request to backend
-        handleFetch(`${API_URL}/v1/assignments`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                user,
-                course,
-                assignmentName,
-                term,
-                step1: uploads[0].map((f) => f.name),
-                step2: uploads[1].map((f) => f.name),
-                step3: uploads[2].map((f) => f.name),
-                step4: uploads[3].map((f) => f.name),
-                step5: uploads[4].map((f) => f.name),
-                step6: uploads[5].map((f) => f.name),
-            }),
-        }).then((result) => {
-            if (result.ok) {
-                toast.success(`User ${user} has submitted assignment ${assignmentName} for ${course} ${term} successfully!`);
-                navigate("/courses", { replace: true });
-                console.log("Submitting payload:", {
-                    user,
-                    course,
-                    assignmentName,
-                    term,
-                    step1: uploads[0].map((f) => f.name),
-                    step2: uploads[1].map((f) => f.name),
-                    step3: uploads[2].map((f) => f.name),
-                    step4: uploads[3].map((f) => f.name),
-                    step5: uploads[4].map((f) => f.name),
-                    step6: uploads[5].map((f) => f.name),
-                });
-            } else {
-                toast.error(`Failed to submit assignment: ${result.statusText}`);
-                console.log(`Failed to submit assignment: ${result.statusText}`);
-            }
-        }).catch((error) => {
-            toast.error(`Failed to submit assignment: ${error}`);
-            console.log(`Failed to submit assignment: ${error}`);
-        });
+    const onSubmit = async () => {
+        const form = new FormData();
+
+        // 1) metadata (simple text fields)
+        form.append("user", user ?? "");
+        form.append("course", course ?? "");
+        form.append("assignmentName", assignmentName ?? "");
+        form.append("term", term ?? "");
+
+        // 2) attach files for steps 2..6 (multiple fields with the same name form a list)
+        (uploads[1] || []).forEach((f) => form.append("step2", f));
+        (uploads[2] || []).forEach((f) => form.append("step3", f));
+        (uploads[3] || []).forEach((f) => form.append("step4", f));
+        (uploads[4] || []).forEach((f) => form.append("step5", f));
+        (uploads[5] || []).forEach((f) => form.append("step6", f));
+
+        try {
+            const res = await handleFetch(`${API_URL}/v1/assignments`, {
+                method: "POST",
+                body: form,
+                credentials: "include",
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+            const result = await res.json();
+
+            toast.success(`Submitted ${assignmentName} for ${course} ${term}`);
+            navigate("/courses", { replace: true });
+            console.log("Server result:", result);
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to submit assignment");
+        }
     };
+
 
     return (
         <Box
