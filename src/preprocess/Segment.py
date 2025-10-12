@@ -20,8 +20,8 @@ import re
 from typing import List, Dict, Any, Tuple, Optional
 from collections import defaultdict
 import os
-from Clean import TextCleaner
-from Loader import DataLoader
+# from Clean import TextCleaner
+# from Loader import DataLoader
 
 class Segmenter:
     def __init__(self):
@@ -193,14 +193,14 @@ if __name__ == "__main__":
     loader = DataLoader()
     text_c = TextCleaner()
     seg = Segmenter()
-    sample_path = "/Users/chenjo/Desktop/UNSW/2025/9900/AI_Moule/data/raw/a1_z1_tutor.pdf"
+    sample_path = "/Users/chenjo/Desktop/UNSW/2025/9900/AI_Moule/data/raw/123.pdf"
 
     if os.path.exists(sample_path):
         record = loader.metadata_extraction(sample_path)
         text_recd = loader.load_file(sample_path)
-        # print(text_recd)
+        # print(,text_recd)
         bc = text_c.process(text_recd)
-        # print(bc['paragraphs'])
+        print('original text:\n',bc['paragraphs'])
         
         a = seg.seg_sum(bc['paragraphs'])
         print(a["sections"])
