@@ -3,7 +3,6 @@ import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
 import TemporaryDrawer from './view-sidedrawer';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
@@ -23,8 +22,8 @@ export default function ButtonAppBar() {
                 <Toolbar>
 
                     <TemporaryDrawer />
-                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                        Hi User, Welcome to ViewPages
+                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 , whiteSpace: 'nowrap'}}>
+                        Hi Admin
                     </Typography>
                     <Stack direction="row" justifyContent="flex-end" sx={{ width: "100%", mb: 1 }}>
 
