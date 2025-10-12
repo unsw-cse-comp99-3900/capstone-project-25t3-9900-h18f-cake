@@ -173,7 +173,7 @@ export default function CourseAdd({ open, onClose, onAdd }) {
                     variant="contained"
                     sx={{
                         backgroundColor: "grey.800",
-                        "&:hover": { backgroundColor: "grey.300" },
+                        "&:hover": { backgroundColor: "grey.500" },
                         borderRadius: "12px",
                         textTransform: "none",
                     }}
@@ -185,7 +185,7 @@ export default function CourseAdd({ open, onClose, onAdd }) {
                     variant="contained"
                     sx={{
                         backgroundColor: "grey.800",
-                        "&:hover": { backgroundColor: "grey.300" },
+                        "&:hover": { backgroundColor: "grey.500" },
                         borderRadius: "12px",
                         textTransform: "none",
                     }}
