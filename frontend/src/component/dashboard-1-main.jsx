@@ -2,23 +2,23 @@ import Box from "@mui/material/Box";
 import { DataGrid } from "@mui/x-data-grid";
 
 const columns = [
-    { field: "studentID", headerName: "Student ID", width: 100, align: "center", headerAlign: "center" },
-    { field: "markBy", headerName: "Mark By", width: 200, align: "center", headerAlign: "center" },
-    { field: "assignment", headerName: "Assignment", width: 200, align: "center", headerAlign: "center" },
-    { field: "tutorMark", headerName: "Tutor mark", width: 150, type: "number", editable: true, align: "center", headerAlign: "center" },
-    { field: "aiMark", headerName: "AI mark", width: 150, type: "number", editable: true, align: "center", headerAlign: "center" },
+    { field: "studentID", headerName: "Student ID", width: 120, align: "center", headerAlign: "center" },
+    { field: "markBy", headerName: "Mark By", width: 120, align: "center", headerAlign: "center" },
+    { field: "assignment", headerName: "Assignment", width: 120, align: "center", headerAlign: "center" },
+    { field: "tutorMark", headerName: "Tutor mark", width: 120, type: "number", editable: true, align: "center", headerAlign: "center" },
+    { field: "aiMark", headerName: "AI mark", width: 120, type: "number", editable: true, align: "center", headerAlign: "center" },
     {
         field: "difference",
         headerName: "Variation",
         type: "number",
-        width: 150,
+        width: 120,
         align: "center",
         headerAlign: "center",
         valueGetter: (_val, row) => (row?.aiMark ?? 0) - (row?.tutorMark ?? 0),
     },
     {
-        field: "comment",
-        headerName: "Comment",
+        field: "feedback",
+        headerName: "Feedback",
         flex: 1,
         editable: true,
         renderCell: (params) => (
@@ -40,7 +40,7 @@ const columns = [
 export default function DashboardStudent({ variant = "studentView", rows = [] }) {
     const isTutorView = variant === "tutorView";
     const density = isTutorView ? "compact" : "standard";
-    const columnVisibilityModel = { comment: !isTutorView };
+    const columnVisibilityModel = { feedback: !isTutorView };
 
     return (
         <Box sx={{ height: isTutorView ? 420 : 480, width: "100%" }}>

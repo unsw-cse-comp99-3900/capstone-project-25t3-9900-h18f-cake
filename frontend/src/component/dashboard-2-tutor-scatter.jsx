@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import { ScatterChart } from "@mui/x-charts/ScatterChart";
+import { ScatterChart } from "@mui/x-charts";
 
 export default function DashboardTutorScatter({ rows = [], size = 500 }) {
     // Guard: show a hint if no data
@@ -35,23 +35,37 @@ export default function DashboardTutorScatter({ rows = [], size = 500 }) {
         data,
     }));
 
+    // Create diagonal points from min to max
+    const steps = 100;
+    const diagData = Array.from({ length: steps + 1 }, (_, i) => {
+        const t = i / steps;
+        const val = minVal + t * (maxVal - minVal);
+        return { x: val, y: val, size: 1 };
+    });
+
+    // Add it as a new scatter series
+    const benchmarkSeries = {
+        id: "y=x",
+        label: "Perfect Agreement (Tutor mark = AI mark)",
+        type: "scatter",
+        data: diagData,
+        markerSize: 2,
+        color: "#aaaaaa",  // Optional soft grey
+        showMark: false,   // If supported; hides dots if not needed
+    };
+
+
     return (
         <Box
-            sx={{
-                width: size,
-                height: size,
-                mx: "auto",           // Center horizontally
-                mt: 3,                // Add top spacing
-                borderRadius: 2,
-            }}
+            sx={{ width: size, height: size, mx: "auto", mt: 3, borderRadius: 2 }}
         >
             <ScatterChart
                 height={size}
-                width={size}
-                series={series}
+                width={size+100}
+                series={[...series, benchmarkSeries]}
                 xAxis={[{ label: "AI mark", min: minVal, max: maxVal }]}
                 yAxis={[{ label: "Tutor mark", min: minVal, max: maxVal }]}
-                margin={{ top: 40, bottom: 60, }}
+                margin={{ top: 40, bottom: 60 }}
                 slotProps={{
                     legend: {
                         direction: "row",
