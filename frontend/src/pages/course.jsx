@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
 import { Box, Stack, Grid, IconButton, Typography } from "@mui/material";
-
+import Tooltip from "@mui/material/Tooltip";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
@@ -136,11 +136,6 @@ export default function CoursesPage() {
         );
     };
 
-    const headerIconSx = {
-        width: 44, height: 44, borderRadius: "50%",
-        border: "3px solid", borderColor: "grey.500", color: "grey.700",
-        "&:hover": { bgcolor: "grey.100" },
-    };
 
     return (
         <Box sx={{ px: { xs: 4, sm: 12, md: 25 }, py: { xs: 6, sm: 8, md: 10 } }}>
@@ -152,31 +147,48 @@ export default function CoursesPage() {
                 <Stack direction="row" spacing={2}>
 
                     <>
-                        <IconButton
-                            sx={headerIconSx}
-                            aria-label="add course"
-                            onClick={() => {
-                                setAddCourse(true);
-                                setShowDeleteCourse(false);
-                                setShowManageCourse(false);
-                            }}
-                        >
-                            <AddCircleOutlineIcon />
-                        </IconButton>
-
-                        <IconButton
-                            sx={headerIconSx}
-                            aria-label="toggle delete mode"
-                            onClick={() => {
-                                setShowDeleteCourse((p) => !p);
-                                setShowManageCourse(false);
-                            }}
-                        >
-                            <RemoveCircleOutlineIcon />
-                        </IconButton>
-
+                        <Tooltip title="Add Course" arrow>
+                            <IconButton
+                                sx={{
+                                    p: 1,                   // padding around icon
+                                    borderRadius: "12px",   // round edges
+                                    "&:hover": {
+                                        backgroundColor: "grey.100",      // <- subtle MUI-style hover bg
+                                        transform: "translateY(-2px)",     // <- slight lift
+                                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)", // <- softer than before
+                                    }
+                                }}
+                                aria-label="add course"
+                                onClick={() => {
+                                    setAddCourse(true);
+                                    setShowDeleteCourse(false);
+                                    setShowManageCourse(false);
+                                }}
+                            >
+                                <AddCircleOutlineIcon sx={{ fontSize: 50 }} />  {/* Bigger icon */}
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Course" arrow>
+                            <IconButton
+                                sx={{
+                                    p: 1,                   // padding around icon
+                                    borderRadius: "12px",   // round edges
+                                    "&:hover": {
+                                        backgroundColor: "grey.100",      // <- subtle MUI-style hover bg
+                                        transform: "translateY(-2px)",     // <- slight lift
+                                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)", // <- softer than before
+                                    }
+                                }}
+                                aria-label="toggle delete mode"
+                                onClick={() => {
+                                    setShowDeleteCourse((p) => !p);
+                                    setShowManageCourse(false);
+                                }}
+                            >
+                                <RemoveCircleOutlineIcon sx={{ fontSize: 50 }} />
+                            </IconButton>
+                        </Tooltip>
                         {/* <IconButton
-                            sx={headerIconSx}
                             aria-label="settings"
                             onClick={() => {
                                 setShowManageCourse((p) => !p);
@@ -185,19 +197,28 @@ export default function CoursesPage() {
                         >
                             <BuildCircleIcon />
                         </IconButton> */}
-                        <IconButton
-                            sx={headerIconSx}
-                            aria-label="toggle delete mode"
-                            onClick={() => {
-                                setShowDeleteCourse(false);
-                                setShowManageCourse(false);
-                                setLogoutOpen(true);
+                        <Tooltip title="Logout" arrow>
 
-                            }}
-
-                        >
-                            <PowerSettingsNewIcon />
-                        </IconButton>
+                            <IconButton
+                                sx={{
+                                    p: 1,                   // padding around icon
+                                    borderRadius: "12px",   // round edges
+                                    "&:hover": {
+                                        backgroundColor: "grey.100",      // <- subtle MUI-style hover bg
+                                        transform: "translateY(-2px)",     // <- slight lift
+                                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)", // <- softer than before
+                                    }
+                                }}
+                                aria-label="logout"
+                                onClick={() => {
+                                    setShowDeleteCourse(false);
+                                    setShowManageCourse(false);
+                                    setLogoutOpen(true);
+                                }}
+                            >
+                                <PowerSettingsNewIcon sx={{ fontSize: 50 }} />
+                            </IconButton>
+                        </Tooltip>
                     </>
 
                 </Stack>

@@ -9,6 +9,10 @@ import { toast } from "sonner";
 import { useAuth } from "../context/auth-context";
 import { API_URL } from "../common/const";
 import { handleFetch } from "../common/utils";
+import ExitConfirmPopup from "../component/exit-confirm";
+import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
+import Tooltip from "@mui/material/Tooltip";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const STEP_LABELS = [
     "Step 1: Assignment Information",
@@ -26,13 +30,15 @@ function fileKey(f) {
 
 // set File Manager - <course> from query string param: "course"
 export default function MultiStepUpload() {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const isLoggedIn = user !== null;
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [course, setCourse] = useState("");
     const [term, setTerm] = useState("");
     const [assignmentName, setAssignmentName] = useState("");
+    const [logoutOpen, setLogoutOpen] = useState(false);
+
 
     // 6 upload steps => indices 0..5
     const [uploads, setUploads] = useState({
@@ -144,6 +150,7 @@ export default function MultiStepUpload() {
     };
 
     const onSubmit = async () => {
+        // Built a FormData with metadata + files
         const form = new FormData();
 
         // 1) metadata (simple text fields)
@@ -159,6 +166,16 @@ export default function MultiStepUpload() {
         (uploads[4] || []).forEach((f) => form.append("step5", f));
         (uploads[5] || []).forEach((f) => form.append("step6", f));
 
+        // 3) Check the form
+        for (const [key, value] of form.entries()) {
+            if (value instanceof File) {
+                console.log(`🗂️ ${key}: file "${value.name}" (${value.size} bytes, ${value.type})`);
+            } else {
+                console.log(`📄 ${key}: ${value}`);
+            }
+        }
+
+        // 4) Submit
         try {
             const res = await handleFetch(`${API_URL}/v1/assignments`, {
                 method: "POST",
@@ -182,17 +199,65 @@ export default function MultiStepUpload() {
     return (
         <Box
             sx={{
-                minHeight: "100svh",
-                display: "grid",
-                placeItems: "center",
+                minHeight: "100vh",          // use vh here
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",        // center horizontally
+                justifyContent: "flex-start",// stick content to top
+                py: 3,                       // small top/bottom padding
                 px: { xs: 2, sm: 4, md: 8 },
                 bgcolor: "grey.100",
             }}
         >
+            <Stack direction="row" justifyContent="flex-end" sx={{ width: "100%", mb: 1 }}>
+                <Tooltip title="Back to Course Page" arrow>
+                    <IconButton
+                        sx={{
+                            p: 1,                   // padding around icon
+                            borderRadius: "12px",   // round edges
+                            "&:hover": {
+                                backgroundColor: "grey.100",      // <- subtle MUI-style hover bg
+                                transform: "translateY(-2px)",     // <- slight lift
+                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)", // <- softer than before
+                            }
+                        }}
+                        aria-label="Back to Course Page"
+                        onClick={() => {
+                            navigate("/courses", { replace: true });
+                        }}
+                    >
+                        <ArrowBackIcon sx={{ fontSize: 50 }} />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="Logout" arrow>
+                    <IconButton
+                        sx={{
+                            borderRadius: "12px",   // round edges
+                            "&:hover": {
+                                backgroundColor: "grey.100",      // <- subtle MUI-style hover bg
+                                transform: "translateY(-2px)",     // <- slight lift
+                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)", // <- softer than before
+                            }
+                        }}
+                        aria-label="logout"
+                        onClick={() => {
+                            setLogoutOpen(true);
+                        }}
+                    >
+                        <PowerSettingsNewIcon sx={{ fontSize: 50 }} />
+                    </IconButton>
+                </Tooltip>
+            </Stack>
+            <ExitConfirmPopup
+                logoutOpen={logoutOpen}
+                setLogoutOpen={setLogoutOpen}
+                logout={logout}
+                navigate={navigate}
+            />
             <Paper
                 elevation={0}
                 sx={{
-                    width: { xs: "100%", sm: "90%", md: "1200px" },
+                    width: { xs: "80%", sm: "80%", md: "80%" },
                     p: 3,
                     borderRadius: "12px",
                     border: "1px solid",
@@ -203,7 +268,7 @@ export default function MultiStepUpload() {
             >
                 <Stack spacing={2}>
                     <Box>
-                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 10 }}>
+                        <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
                             Upload Assignment - {term ? term : "No term selected"} {course ? course : "No course selected"}
                         </Typography>
                     </Box>
