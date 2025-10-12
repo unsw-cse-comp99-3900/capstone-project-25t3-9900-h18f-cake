@@ -210,24 +210,6 @@ export default function MultiStepUpload() {
             }}
         >
             <Stack direction="row" justifyContent="flex-end" sx={{ width: "100%", mb: 1 }}>
-                <Tooltip title="Logout" arrow>
-                    <IconButton
-                        sx={{
-                            borderRadius: "12px",   // round edges
-                            "&:hover": {
-                                backgroundColor: "grey.100",      // <- subtle MUI-style hover bg
-                                transform: "translateY(-2px)",     // <- slight lift
-                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)", // <- softer than before
-                            }
-                        }}
-                        aria-label="logout"
-                        onClick={() => {
-                            setLogoutOpen(true);
-                        }}
-                    >
-                        <PowerSettingsNewIcon sx={{ fontSize: 50 }} />
-                    </IconButton>
-                </Tooltip>
                 <Tooltip title="Back to Course Page" arrow>
                     <IconButton
                         sx={{
@@ -245,6 +227,24 @@ export default function MultiStepUpload() {
                         }}
                     >
                         <ArrowBackIcon sx={{ fontSize: 50 }} />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="Logout" arrow>
+                    <IconButton
+                        sx={{
+                            borderRadius: "12px",   // round edges
+                            "&:hover": {
+                                backgroundColor: "grey.100",      // <- subtle MUI-style hover bg
+                                transform: "translateY(-2px)",     // <- slight lift
+                                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)", // <- softer than before
+                            }
+                        }}
+                        aria-label="logout"
+                        onClick={() => {
+                            setLogoutOpen(true);
+                        }}
+                    >
+                        <PowerSettingsNewIcon sx={{ fontSize: 50 }} />
                     </IconButton>
                 </Tooltip>
             </Stack>
