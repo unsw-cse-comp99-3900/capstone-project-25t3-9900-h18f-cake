@@ -10,7 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
   LabelList,
-  Cell // 添加 Cell 组件用于自定义颜色
+  Cell
 } from 'recharts';
 
 const MarkingDifferenceChart = ({ data }) => {
@@ -22,9 +22,14 @@ const MarkingDifferenceChart = ({ data }) => {
     difference: item.difference
   }));
 
-  // Custom tooltip
+  // 修复的 CustomTooltip 组件
   const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
+    if (active && payload && payload.length > 0) {
+      // 安全地获取值，避免 undefined 错误
+      const aiMarkValue = payload[0]?.value || 0;
+      const tutorMarkValue = payload[1]?.value || 0;
+      const differenceValue = payload[2]?.value || 0;
+      
       return (
         <div className="custom-tooltip" style={{ 
           backgroundColor: '#fff', 
@@ -34,13 +39,13 @@ const MarkingDifferenceChart = ({ data }) => {
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
           <p style={{ fontWeight: 'bold', marginBottom: '5px' }}>{label}</p>
-          <p style={{ color: '#8884d8' }}>AI Mark: {payload[0].value}</p>
-          <p style={{ color: '#82ca9d' }}>Tutor Mark: {payload[1].value}</p>
+          <p style={{ color: '#8884d8' }}>AI Mark: {aiMarkValue}</p>
+          <p style={{ color: '#82ca9d' }}>Tutor Mark: {tutorMarkValue}</p>
           <p style={{ 
-            color: payload[2].value >= 0 ? '#0088fe' : '#ff7300',
+            color: differenceValue >= 0 ? '#0088fe' : '#ff7300',
             fontWeight: 'bold'
           }}>
-            Difference: {payload[2].value}
+            Difference: {differenceValue}
           </p>
         </div>
       );
@@ -102,7 +107,6 @@ const MarkingDifferenceChart = ({ data }) => {
               dataKey="difference" 
               name="Difference"
             >
-              {/* 使用 Cell 组件自定义每个柱子的颜色 */}
               {chartData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
