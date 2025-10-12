@@ -131,7 +131,7 @@ export default function CoursesPage() {
         const term = c.term || c.year_term || "";
         closeActions();
         navigate(
-            `/viewpages?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(term)}`,
+            `/dashboard?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(term)}`,
             { replace: false }
         );
     };

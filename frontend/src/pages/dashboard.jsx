@@ -4,40 +4,62 @@ import {
     ToggleButton, ToggleButtonGroup,
     FormControl, InputLabel, Select, MenuItem
 } from "@mui/material";
-import DashboardStudent from "../component/dashboard-main";
-import DashboardTutorScatter from "../component/dashboard-tutor-scatter";
+import DashboardStudent from "../component/dashboard-1-main";
+import DashboardTutorScatter from "../component/dashboard-2-tutor-scatter";
 import Tooltip from "@mui/material/Tooltip";
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import ExitConfirmPopup from "../component/exit-confirm";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import MarkingDifferenceChart from "../component/dashboard-3-difference";
+import TemporaryDrawer from '../component/view-sidedrawer';
 
 
 
 // Demo data with assignment
 const ALL_ROWS = [
-    { studentID: 1, markBy: "Tutor 1", tutorMark: 78, aiMark: 85, difference: 7, comment: "Good improvement", assignment: "Assignment 1" },
-    { studentID: 2, markBy: "Tutor 2", tutorMark: 95, aiMark: 92, difference: -3, comment: "This is a very very long comment This is a very very long commentThis is a very very long commentThis is a very very long comment------------------------------", assignment: "Assignment 2" },
-    { studentID: 3, markBy: "Tutor 2", tutorMark: 82, aiMark: 76, difference: -6, comment: "", assignment: "Assignment 1" },
-    { studentID: 4, markBy: "Tutor 3", tutorMark: 85, aiMark: 88, difference: 3, comment: "", assignment: "Assignment 3" },
+    { studentID: 1, markBy: "Peter Zhang", tutorMark: 78, aiMark: 85, difference: 7, feedback: "Good improvement", assignment: "Assignment 1" },
+    { studentID: 2, markBy: "Jessie Chen", tutorMark: 95, aiMark: 92, difference: -3, feedback: "This is a very very long feedback This is a very very long feedbackThis is a very very long feedbackThis is a very very long feedback------------------------------", assignment: "Assignment 2" },
+    { studentID: 3, markBy: "Tutor 4", tutorMark: 82, aiMark: 76, difference: -6, feedback: "", assignment: "Assignment 1" },
+    { studentID: 4, markBy: "Tutor 3", tutorMark: 85, aiMark: 85, difference: 0, feedback: "", assignment: "Assignment 3" },
+    { studentID: 4, markBy: "Tutor 3", tutorMark: 85, aiMark: 88, difference: 3, feedback: "", assignment: "Assignment 3" },
+
 ];
 
 const ASSIGNMENTS = ["Assignment 1", "Assignment 2", "Assignment 3"];
-const TUTORS = ["Tutor 1", "Tutor 2", "Tutor 3"];
+const TUTORS = ["Peter Zhang", "Jessie Chen", "Tutor 3", "Tutor 4"];
 
 export default function Dashboard() {
+    const [searchParams] = useSearchParams();
+    const [course, setCourse] = useState("");
+    const [term, setTerm] = useState("");
+
+    useEffect(() => {
+        const courseParam = searchParams.get("course");
+        const termParam = searchParams.get("term");
+        if (courseParam) {
+            setCourse(courseParam);
+        }
+
+        if (termParam) {
+            setTerm(termParam);
+        }
+    }, [searchParams]);
+
     const navigate = useNavigate();
     const { logout } = useAuth();
     const [logoutOpen, setLogoutOpen] = useState(false);
-    const [variant, setVariant] = useState("studentView"); // 'studentView' | 'tutorView'
+    const [variant, setVariant] = useState("studentView"); // 'studentView' | 'tutorView' | 'differenceView'
     const [selectedAssignment, setSelectedAssignment] = useState("all");
     const [selectedTutor, setSelectedTutor] = useState("all");
 
-    const handleViewChange = (e, newValue) => {
-        e?.preventDefault();
-        if (newValue) setVariant(newValue); // avoid null in exclusive mode
-    };
+    // const handleViewChange = (e, newValue) => {
+    //     e?.preventDefault();
+    //     if (newValue) setVariant(newValue); // avoid null in exclusive mode
+    // };
 
     const filteredRows = useMemo(() => {
         return ALL_ROWS.filter((r) => {
@@ -47,17 +69,15 @@ export default function Dashboard() {
         });
     }, [selectedAssignment, selectedTutor]);
 
-    const isStudentView = variant === "studentView";
-
     return (
 
         <Box sx={{ p: { xs: 2, md: 5 } }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
-
-                <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: 28, md: 48 }, lineHeight: 1.1 }}>
-                    Dashboard
+                <TemporaryDrawer />
+                <Typography variant="h2" sx={{ fontWeight: 700, fontSize: { xs: 10, md: 30 }, lineHeight: 1.1 }}>
+                    {course} {term}
                 </Typography>
-                <Stack direction="row" justifyContent="flex-end" sx={{ width: "100%", mb: 1 }}>
+                <Stack direction="row" justifyContent="flex-end" sx={{ width: "10%", mb: 1 }}>
 
                     <Tooltip title="Back to Course Page" arrow>
                         <IconButton
@@ -115,7 +135,7 @@ export default function Dashboard() {
                     direction="row"
                     spacing={2}
                     alignItems="center"
-                    sx={{ width: "100%", justifyContent: "center" }}
+                    sx={{ width: "100%", justifyContent: "center", mb: 3 }}
                 >                    {/* Choose assignment */}
                     <FormControl size="small" sx={{ minWidth: 220 }}>
                         <InputLabel id="assignment-select-label">Choose assignment</InputLabel>
@@ -153,8 +173,8 @@ export default function Dashboard() {
                         size="small"
                         exclusive
                         value={variant}
-                        onChange={handleViewChange}
                         aria-label="dashboard view"
+                        onChange={(_, v) => { if (v) setVariant(v); }}
                     >
                         <ToggleButton value="studentView" aria-label="student view" type="button">
                             Main Board
@@ -162,18 +182,25 @@ export default function Dashboard() {
                         <ToggleButton value="tutorView" aria-label="tutor view" type="button">
                             Tutor Scatter
                         </ToggleButton>
+                        <ToggleButton value="differenceView" aria-label="difference view" type="button">
+                            Marking Difference
+                        </ToggleButton>
 
                     </ToggleButtonGroup>
                 </Stack>
             </Stack>
 
-            {isStudentView ? (
+            {variant === "studentView" ? (
                 <Box sx={{ width: "100%", height: "100%" }}>
                     <DashboardStudent variant="studentView" rows={filteredRows} />
                 </Box>
+            ) : variant === "tutorView" ? (
+                <Box sx={{ width: "100%", height: "100%" }}>
+                    <DashboardTutorScatter variant="tutorView" rows={filteredRows} />
+                </Box>
             ) : (
                 <Box sx={{ width: "100%", height: "100%" }}>
-                    <DashboardTutorScatter rows={filteredRows} size={500} />
+                    <MarkingDifferenceChart variant="differenceView" rows={filteredRows} />
                 </Box>
             )}
         </Box>
