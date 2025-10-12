@@ -5,6 +5,7 @@ import FileUpload from "./pages/fileupload";
 import { AuthProvider } from "./context/auth-context";
 import { Toaster } from "sonner";
 import ViewPages from "./pages/viewpages";
+import Dashboard from "./pages/dashboard";
 
 export default function PageRoutes() {
     return (
@@ -15,6 +16,8 @@ export default function PageRoutes() {
                     <Route path="/courses" element={<CoursesPage />} />
                     <Route path="/fileupload" element={<FileUpload />} />
                     <Route path="/viewpages" element={<ViewPages />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+
                 </Routes>
                 <Toaster position="top-right" richColors closeButton />
             </>
