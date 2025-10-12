@@ -9,7 +9,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LabelList
+  LabelList,
+  Cell // 添加 Cell 组件用于自定义颜色
 } from 'recharts';
 
 const MarkingDifferenceChart = ({ data }) => {
@@ -99,9 +100,15 @@ const MarkingDifferenceChart = ({ data }) => {
             <Legend />
             <Bar 
               dataKey="difference" 
-              name="Difference" 
-              fill={(entry) => entry.difference >= 0 ? '#0088fe' : '#ff7300'}
+              name="Difference"
             >
+              {/* 使用 Cell 组件自定义每个柱子的颜色 */}
+              {chartData.map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={entry.difference >= 0 ? '#0088fe' : '#ff7300'} 
+                />
+              ))}
               <LabelList dataKey="difference" position="top" />
             </Bar>
           </BarChart>
