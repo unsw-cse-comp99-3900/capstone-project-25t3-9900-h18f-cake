@@ -27,5 +27,8 @@ matplotlib==3.9.2
 # stem analysis
 nltk==3.9.1
 
+#rubric generation
+keybert>=0.8.4       # 关键词抽取
+openai>=1.40.0
 
         
