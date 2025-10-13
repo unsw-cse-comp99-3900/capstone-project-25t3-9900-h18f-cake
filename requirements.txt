@@ -15,7 +15,7 @@ pymupdf==1.21.0
 python-docx==1.1.2
 pytesseract==0.3.10
 Pillow==10.3.0
-pdfminer.six==20240706   # 另一套稳健的 PDF 文本抽取
+pdfminer.six==20240706   
 paddleocr>=3.0.0   
 paddlepaddle>=3.0.0,<4.0
 opencv-python-headless==4.10.0.84
@@ -25,10 +25,13 @@ pytesseract==0.3.10
 pyyaml==6.0.2
 matplotlib==3.9.2
 # stem analysis
-nltk==3.9.1
+nltk==3.9.1 #punkt, stopwords
 
 #rubric generation
 keybert>=0.8.4       # 关键词抽取
 openai>=1.40.0
+
+#rubric retriever
+faiss-cpu>=1.7.4
 
         

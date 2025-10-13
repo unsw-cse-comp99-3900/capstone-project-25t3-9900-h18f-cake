@@ -23,6 +23,14 @@ AI_Module/
 │   └─ final_scores.csv  # Final fused & calibrated scores
 ├─ scripts/              # Step-wise runnable scripts
 ├─ src/                  # Core source code (preprocessing, models, etc.)
+│   ├─ preprocess        # Data preprocessing
+│       ├─ Loader.py     # Load raw data
+│       ├─ Clean.py      # Unified format
+│       └─ Chunker.py    # Segment text to chunks
+│   ├─ rubric_retriever  # Similarities retriever
+│       ├─ keywords_gen.py     # Rubric keywords generation 
+│       ├─ Embedder.py      # Transfer chunked-text/rubric kw to embeddings
+│       └─ Retriever.py    # Embedding index/similarities calculation
 ├─ main.py               # Main entry point
 ├─ requirements.txt      # Python dependencies
 └─ README.md             # Project documentation

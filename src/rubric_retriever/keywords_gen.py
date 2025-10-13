@@ -9,7 +9,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from preprocess.Clean import TextCleaner
 from preprocess.Loader import DataLoader
 from preprocess.Segment import Segmenter
-
+'''
+output format:
+{'dimension':['a','b','c...']}, 
+'''
 class RubricExtraction:
     def __init__(self,
         sbert_model: str = "all-MiniLM-L6-v2",
