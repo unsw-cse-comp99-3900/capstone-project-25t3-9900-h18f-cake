@@ -17,73 +17,73 @@ import SchoolIcon from '@mui/icons-material/School';
 import DescriptionIcon from '@mui/icons-material/Description';
 
 export default function TemporaryDrawer() {
-  const [open, setOpen] = React.useState(false);
+    const [open, setOpen] = React.useState(false);
 
-  const toggleDrawer = (newOpen) => () => {
-    setOpen(newOpen);
-  };
+    const toggleDrawer = (newOpen) => () => {
+        setOpen(newOpen);
+    };
 
-  // 根据文本内容返回对应的图标
-  const getIconForItem = (text) => {
-    const lowerText = text.toLowerCase();
-    
-    if (lowerText.includes('assignment')) {
-      return <AssignmentIcon />;
-    } else if (lowerText.includes('project')) {
-      return <WorkIcon />;
-    } else if (lowerText.includes('exam')) {
-      return <SchoolIcon />;
-    } else {
-      return <DescriptionIcon />;
-    }
-  };
+    // 根据文本内容返回对应的图标
+    const getIconForItem = (text) => {
+        const lowerText = text.toLowerCase();
 
-  const DrawerList = (
-    <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
-      <List>
-        {['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4'].map((text) => (
-          <ListItem key={text} disablePadding>
-            <ListItemButton>
-              <ListItemIcon>
-                {getIconForItem(text)}
-              </ListItemIcon>
-              <ListItemText primary={text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      <Divider />
-      <List>
-        {['Project 1', 'Mid Term Exam', 'Final exam'].map((text) => (
-          <ListItem key={text} disablePadding>
-            <ListItemButton>
-              <ListItemIcon>
-                {getIconForItem(text)}
-              </ListItemIcon>
-              <ListItemText primary={text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-    </Box>
-  );
+        if (lowerText.includes('assignment')) {
+            return <AssignmentIcon />;
+        } else if (lowerText.includes('project')) {
+            return <WorkIcon />;
+        } else if (lowerText.includes('exam')) {
+            return <SchoolIcon />;
+        } else {
+            return <DescriptionIcon />;
+        }
+    };
 
-  return (
-    <div>
-      <IconButton 
-        size="large"
-        edge="start"
-        color="inherit"
-        aria-label="menu"
-        sx={{ mr: 2 }}
-        onClick={toggleDrawer(true)}
-      >
-        <MenuIcon />
-      </IconButton>
-      
-      <Drawer open={open} onClose={toggleDrawer(false)}>
-        {DrawerList}
-      </Drawer>
-    </div>
-  );
+    const DrawerList = (
+        <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
+            <List>
+                {['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4'].map((text) => (
+                    <ListItem key={text} disablePadding>
+                        <ListItemButton>
+                            <ListItemIcon>
+                                {getIconForItem(text)}
+                            </ListItemIcon>
+                            <ListItemText primary={text} />
+                        </ListItemButton>
+                    </ListItem>
+                ))}
+            </List>
+            <Divider />
+            <List>
+                {['Project 1', 'Mid Term Exam', 'Final exam'].map((text) => (
+                    <ListItem key={text} disablePadding>
+                        <ListItemButton>
+                            <ListItemIcon>
+                                {getIconForItem(text)}
+                            </ListItemIcon>
+                            <ListItemText primary={text} />
+                        </ListItemButton>
+                    </ListItem>
+                ))}
+            </List>
+        </Box>
+    );
+
+    return (
+        <div>
+            <IconButton
+                size="large"
+                edge="start"
+                color="inherit"
+                aria-label="menu"
+                sx={{ mr: 2 }}
+                onClick={toggleDrawer(true)}
+            >
+                <MenuIcon sx={{ fontSize: 40 }} />   {/* Bigger icon */}
+            </IconButton>
+
+            <Drawer open={open} onClose={toggleDrawer(false)}>
+                {DrawerList}
+            </Drawer>
+        </div>
+    );
 }
