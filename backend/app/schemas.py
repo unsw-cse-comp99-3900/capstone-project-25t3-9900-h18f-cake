@@ -1,20 +1,18 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, constr
 from typing import Optional
 
 class TokenOut(BaseModel):
     access_token: str
-    token_type: str = "bearer"
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
-    role: str = "coordinator"
+    password: constr(min_length=6, max_length=256)
 
 class UserOut(BaseModel):
     id: int
     email: EmailStr
-    role: str
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
 
 class CourseIn(BaseModel):
     name: str
@@ -22,7 +20,11 @@ class CourseIn(BaseModel):
 
 class CourseOut(CourseIn):
     id: int
-    class Config: from_attributes = True
+    name: str
+    term: str | None = None
+    owner_id: int
+    class Config:
+        from_attributes = True
 
 class AssignmentIn(BaseModel):
     course_id: int
@@ -41,3 +43,7 @@ class SubmissionOut(BaseModel):
     file_url: str
     status: str
     class Config: from_attributes = True
+
+class UserClaims(BaseModel):
+    sub: str
+    role: Optional[str] = None 
