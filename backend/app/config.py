@@ -1,10 +1,12 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_env: str = Field("dev", alias="APP_ENV")
     secret_key: str = Field(..., alias="SECRET_KEY")
     access_token_expire_minutes: int = Field(120, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    sqlalchemy_dsn: str = "sqlite:///dev.db"
 
     postgres_user: str | None = Field(None, alias="POSTGRES_USER")
     postgres_password: str | None = Field(None, alias="POSTGRES_PASSWORD")
