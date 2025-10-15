@@ -43,7 +43,7 @@ export default function DashboardStudent({ variant = "studentView", rows = [] })
     const columnVisibilityModel = { feedback: !isTutorView };
 
     return (
-        <Box sx={{ height: isTutorView ? 420 : 480, width: "100%" }}>
+        <Box sx={{ height: "90%", width: "100%" }}>
             <DataGrid
                 rows={rows}
                 columns={columns}
