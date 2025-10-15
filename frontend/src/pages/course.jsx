@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
 import { Box, Stack, Grid, IconButton, Typography } from "@mui/material";
-import Tooltip from "@mui/material/Tooltip";
+
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
-import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
+import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 
 import CourseCard from "../component/course-card";
 import CourseAdd from "../component/course-add";
@@ -14,107 +14,121 @@ import CourseActionDialog from "../component/course-action";
 import ExitConfirmPopup from "../component/exit-confirm";
 import { toast } from "sonner";
 
-import { API_URL } from "../common/const";
-import { handleFetch } from "../common/utils";
-// import BuildCircleIcon from '@mui/icons-material/BuildCircle';
-// import CourseManage from "../component/course-manage";
+import API from "../api";
+
+const TOKEN_KEY = "token";
 
 export default function CoursesPage() {
-    // API sync request to backend
-    const [termCourse, setTermCourse] = useState([]);
+  const [termCourse, setTermCourse] = useState([]);
 
-    useEffect(() => {
-        // API sync request to backend
-        handleFetch(`${API_URL}/v1/courses`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
-        }).then(response => response.json()).then(data => {
-            setTermCourse(data);
-            console.log("Successfully fetched data:", data);
-        }).catch(error => {
-            console.error("Error fetching data:", error);
-        });
-    }, []);
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const isLoggedIn = user !== null || !!localStorage.getItem(TOKEN_KEY);
 
-    const navigate = useNavigate();
-
-    const { user, logout } = useAuth();
-    const isLoggedIn = user !== null;
-
-    useEffect(() => {
-        if (!isLoggedIn) navigate("/");
-    }, [isLoggedIn, navigate]);
-
-    const [showDeleteCourse, setShowDeleteCourse] = useState(false);
-    const [ShowManageCourse, setShowManageCourse] = useState(false);
-    const [addCourse, setAddCourse] = useState(false);
-
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    // const [manageOpen, setManageOpen] = useState(false);
-    const [pendingDelete, setPendingDelete] = useState(null); // { term, code, title }
-    // const [pendingManage, setPendingManage] = useState(null); // { term, code, title }
-
-    const [logoutOpen, setLogoutOpen] = useState(false);
-
-    const requestDelete = (course) => { setPendingDelete(course); setConfirmOpen(true); };
-    // const requestManage = (course) => { setPendingManage(course); setManageOpen(true); };
-
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [selectedCourse, setSelectedCourse] = useState(null);
-
-    const grouped = useMemo(() => {
-        return termCourse.reduce((acc, c) => { (acc[c.year_term] ||= []).push(c); return acc; }, {});
-    }, [termCourse]);
-
-    const handleConfirmDelete = () => {
-        if (!pendingDelete) return;
-        setTermCourse(prev => prev.filter(c => c.code !== pendingDelete.code));
-        setConfirmOpen(false);
-        setPendingDelete(null);
-
-        // API sync request to backend
-        handleFetch(`${API_URL}/v1/courses`, {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(pendingDelete),
-        }).then((result) => {
-            if (result.ok) {
-                console.log(`User: ${user} has successfully deleted Course ${pendingDelete.code}, ${pendingDelete.title}, ${pendingDelete.year_term}`)
-                toast.success(`User ${user} has successfully deleted course ${pendingDelete.code}, ${pendingDelete.title}, ${pendingDelete.term}}`);
-            } else {
-                console.log(`Failed to delete course: ${result.statusText}`);
-                toast.error(`Failed to delete course: ${result.statusText}`);
-            }
-        })
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate("/");
+      return;
     }
 
-    const handleCancelDelete = () => { setConfirmOpen(false); setPendingDelete(null); };
+    API.courses
+      .list()
+      .then((data) => {
+        const mapped = (Array.isArray(data) ? data : []).map((c) => ({
+          _id: c.id,
+          code: c.code,
+          title: c.name,
+          year_term: c.term || "untitled",
+        }));
+        setTermCourse(mapped);
+      })
+      .catch((err) => {
+        toast.error(err?.message || "Failed to fetch courses");
+      });
+  }, [isLoggedIn, navigate]);
 
-    // const handleConfirmManage = (newCourse) => {
-    //     setTermCourse(prev => prev.map(c => c.code === newCourse.code ? newCourse : c));
-    //     // setManageOpen(false);
-    //     // setPendingManage(null);
-    //     console.log(`User: ${user} has successfully updated Course ${newCourse.code}, ${newCourse.title}, ${newCourse.term}}`);
-    // };
+  const [showDeleteCourse, setShowDeleteCourse] = useState(false);
+  const [ShowManageCourse, setShowManageCourse] = useState(false);
+  const [addCourse, setAddCourse] = useState(false);
 
-    const handleAddCourse = (newCourse) => {
-        setTermCourse(prev => [...prev, newCourse]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+
+  const grouped = useMemo(() => {
+    return termCourse.reduce((acc, c) => {
+      (acc[c.year_term] ||= []).push(c);
+      return acc;
+    }, {});
+  }, [termCourse]);
+
+  const requestDelete = (course) => {
+    setPendingDelete(course);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!pendingDelete) return;
+    setTermCourse((prev) => prev.filter((c) => c.code !== pendingDelete.code));
+    setConfirmOpen(false);
+
+    const id = pendingDelete._id;
+    const deletedTitle = pendingDelete.title;
+    setPendingDelete(null);
+
+    API.courses
+      .remove(id)
+      .then(() => {
+        toast.success(`Deleted course ${deletedTitle}`);
+      })
+      .catch((e) => {
+        toast.error(e?.message || "Delete failed");
+      });
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmOpen(false);
+    setPendingDelete(null);
+  };
+
+  const handleAddCourse = (newCourse) => {
+  const code = (newCourse?.code || "").trim();
+  const name = (newCourse?.title || newCourse?.name || "").trim();
+  const term = (newCourse?.year_term || newCourse?.term || "").trim();
+  if (!code) { toast.error("Course code is required"); return; }
+  if (!name) { toast.error("Course name is required"); return; }
+
+    API.courses
+      .create({ code, name, term: term || undefined })   
+      .then((created) => {
+        const mapped = {
+          _id: created.id,
+          code: created.code,
+          title: created.name,
+          year_term: created.term || "untitled",
+        };
+        setTermCourse((prev) => [...prev, mapped]);
         setAddCourse(false);
-    };
+        toast.success(`Created: ${mapped.title}`);
+      })
+      .catch((err) => {
+        toast.error(err?.message || "Create failed");
+      });
+  };
 
-    const openActions = (course) => {
-        setSelectedCourse(course);
-        setDialogOpen(true);
-    };
+  const openActions = (course) => {
+    setSelectedCourse(course);
+    setDialogOpen(true);
+  };
 
-    const closeActions = () => {
-        setDialogOpen(false);
-        setSelectedCourse(null);
-    };
+  const closeActions = () => {
+    setDialogOpen(false);
+    setSelectedCourse(null);
+  };
 
     const goUpload = () => {
         const c = selectedCourse;
@@ -290,4 +304,118 @@ export default function CoursesPage() {
             />
         </Box>
     );
+  };
+
+  const goView = () => {
+    const c = selectedCourse;
+    const term = c.term || c.year_term || "";
+    closeActions();
+    navigate(
+      `/viewpages?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(term)}`,
+      { replace: false }
+    );
+  };
+
+  const headerIconSx = {
+    width: 44,
+    height: 44,
+    borderRadius: "50%",
+    border: "3px solid",
+    borderColor: "grey.500",
+    color: "grey.700",
+    "&:hover": { bgcolor: "grey.100" },
+  };
+
+  return (
+    <Box sx={{ px: { xs: 4, sm: 12, md: 25 }, py: { xs: 6, sm: 8, md: 10 } }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
+        <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: 28, md: 48 }, lineHeight: 1.1 }}>
+          Courses
+        </Typography>
+        <Stack direction="row" spacing={2}>
+          <>
+            <IconButton
+              sx={headerIconSx}
+              aria-label="add course"
+              onClick={() => {
+                setAddCourse(true);
+                setShowDeleteCourse(false);
+                setShowManageCourse(false);
+              }}
+            >
+              <AddCircleOutlineIcon />
+            </IconButton>
+
+            <IconButton
+              sx={headerIconSx}
+              aria-label="toggle delete mode"
+              onClick={() => {
+                setShowDeleteCourse((p) => !p);
+                setShowManageCourse(false);
+              }}
+            >
+              <RemoveCircleOutlineIcon />
+            </IconButton>
+
+            <IconButton
+              sx={headerIconSx}
+              aria-label="logout"
+              onClick={() => {
+                setShowDeleteCourse(false);
+                setShowManageCourse(false);
+                setLogoutOpen(true);
+              }}
+            >
+              <PowerSettingsNewIcon />
+            </IconButton>
+          </>
+        </Stack>
+      </Stack>
+
+      <Stack spacing={10}>
+        {Object.entries(grouped).map(([year_term, items]) => (
+          <Box key={year_term}>
+            <Typography variant="overline" sx={{ color: "grey.600", letterSpacing: ".12em", fontWeight: 800 }}>
+              {year_term.toUpperCase()}
+            </Typography>
+
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              {items.map((c) => (
+                <Box key={c.code} sx={{ display: "flex" }}>
+                  <CourseCard
+                    code={c.code}
+                    title={c.title}
+                    showDelete={showDeleteCourse}
+                    showManage={ShowManageCourse}
+                    onDelete={() => requestDelete(c)}
+                    onOpen={() => {
+                      openActions(c);
+                    }}
+                  />
+                </Box>
+              ))}
+            </Grid>
+          </Box>
+        ))}
+      </Stack>
+
+      <CourseAdd open={addCourse} onClose={() => setAddCourse(false)} onAdd={handleAddCourse} />
+
+      <CourseDelete
+        open={confirmOpen}
+        onClose={handleCancelDelete}
+        onDelete={handleConfirmDelete}
+        course={pendingDelete}
+      />
+
+      <CourseActionDialog open={dialogOpen} course={selectedCourse} onClose={closeActions} onUpload={goUpload} onView={goView} />
+
+      <ExitConfirmPopup
+        logoutOpen={logoutOpen}
+        setLogoutOpen={setLogoutOpen}
+        logout={logout}
+        navigate={navigate}
+      />
+    </Box>
+  );
 }
