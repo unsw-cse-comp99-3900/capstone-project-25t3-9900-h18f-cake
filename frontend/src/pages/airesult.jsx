@@ -33,7 +33,7 @@ const ALL_ROWS = [
 const ASSIGNMENTS = ["Assignment 1", "Assignment 2", "Assignment 3"];
 const TUTORS = ["Peter Zhang", "Jessie Chen", "Tutor 3", "Tutor 4"];
 
-export default function Dashboard() {
+export default function Airesult() {
     const [searchParams] = useSearchParams();
     const [course, setCourse] = useState("");
     const [term, setTerm] = useState("");

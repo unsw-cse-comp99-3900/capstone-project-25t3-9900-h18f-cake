@@ -4,7 +4,7 @@ import CoursesPage from "./pages/course";
 import FileUpload from "./pages/fileupload";
 import { AuthProvider, useAuth } from "./context/auth-context";
 import { Toaster } from "sonner";
-import Dashboard from "./pages/airesult";
+import Airesult from "./pages/airesult";
 
 function Private({ children }) {
   const { token } = useAuth();
@@ -49,7 +49,7 @@ export default function PageRoutes() {
             path="/airesult"
             element={
               <Private>
-                <Dashboard />
+                <Airesult />
               </Private>
             }
           />
