@@ -39,7 +39,11 @@ export default function CourseCard({
                 transition: "box-shadow .2s ease, transform .08s ease",
                 border: (showDelete || showManage) ? "2px solid #475569" : "1px solid transparent",
                 "&:hover": !(showDelete || showManage)
-                    ? { transform: "translateY(-1px)", boxShadow: "0 6px 16px rgba(2,6,23,.08)" }
+                    ? {
+                        backgroundColor: "grey.100",      // <- subtle MUI-style hover bg
+                        transform: "translateY(-2px)",     // <- slight lift
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)", // <- softer than before
+                    }
                     : undefined,
                 "&:focus-visible": !(showDelete || showManage)
                     ? { outline: "2px solid #94a3b8", outlineOffset: 2 }
@@ -63,7 +67,7 @@ export default function CourseCard({
                         height: 28,
                         bgcolor: "#fff",
                         border: "1px solid",
-                        borderColor: "grey.300",
+                        borderColor: "black.300",
                         "&:hover": { bgcolor: "grey.50" },
                     }}
                 >

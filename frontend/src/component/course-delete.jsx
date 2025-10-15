@@ -36,7 +36,7 @@ export default function CourseDelete({ open, onClose, onDelete, course }) {
                     variant="contained"
                     sx={{
                         backgroundColor: "grey.800",
-                        "&:hover": { backgroundColor: "grey.300" },
+                        "&:hover": { backgroundColor: "grey.800" },
                         borderRadius: "12px",
                         textTransform: "none",
                     }}
@@ -47,7 +47,7 @@ export default function CourseDelete({ open, onClose, onDelete, course }) {
                     variant="contained"
                     color="error"
                     onClick={onDelete}
-                    sx={{ borderRadius: "12px", textTransform: "none" }}
+                    sx={{ borderRadius: "12px", textTransform: "none", }}
                 >
                     Delete
                 </Button>
