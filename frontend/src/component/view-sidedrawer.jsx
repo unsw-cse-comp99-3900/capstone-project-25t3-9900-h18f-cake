@@ -1,89 +1,86 @@
-import * as React from 'react';
-import Box from '@mui/material/Box';
-import Drawer from '@mui/material/Drawer';
-import List from '@mui/material/List';
-import Divider from '@mui/material/Divider';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import { IconButton } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
+import { useMemo } from "react";
+import {
+    Drawer, Box, List, ListItemButton, ListItemIcon, ListItemText
+} from "@mui/material";
+import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import RateReviewIcon from '@mui/icons-material/RateReview';
+export const SIDEBAR_WIDTH = 180;
 
-// 导入不同类型的图标
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import WorkIcon from '@mui/icons-material/Work';
-import SchoolIcon from '@mui/icons-material/School';
-import DescriptionIcon from '@mui/icons-material/Description';
+export default function Sidebar({onClose, topOffset}) {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [searchParams] = useSearchParams();
 
-export default function TemporaryDrawer() {
-    const [open, setOpen] = React.useState(false);
+    const course = searchParams.get("course") || "";
+    const term = searchParams.get("term") || "";
 
-    const toggleDrawer = (newOpen) => () => {
-        setOpen(newOpen);
-    };
-
-    // 根据文本内容返回对应的图标
-    const getIconForItem = (text) => {
-        const lowerText = text.toLowerCase();
-
-        if (lowerText.includes('assignment')) {
-            return <AssignmentIcon />;
-        } else if (lowerText.includes('project')) {
-            return <WorkIcon />;
-        } else if (lowerText.includes('exam')) {
-            return <SchoolIcon />;
-        } else {
-            return <DescriptionIcon />;
+    const goDashboard = () => {
+        const dashUrl = `/dashboard?course=${encodeURIComponent(course)}&term=${encodeURIComponent(term)}`;
+        if (location.pathname + location.search !== dashUrl) {
+            navigate(dashUrl);
         }
+        onClose?.();
     };
 
-    const DrawerList = (
-        <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)}>
-            <List>
-                {['Assignment 1', 'Assignment 2', 'Assignment 3', 'Assignment 4'].map((text) => (
-                    <ListItem key={text} disablePadding>
-                        <ListItemButton>
-                            <ListItemIcon>
-                                {getIconForItem(text)}
-                            </ListItemIcon>
-                            <ListItemText primary={text} />
-                        </ListItemButton>
-                    </ListItem>
-                ))}
+    const content = useMemo(() => (
+        <Box sx={{ width: SIDEBAR_WIDTH, height: "100%", display: "flex", flexDirection: "column" }}>
+            <List
+                dense
+                sx={{ px: 1 }}
+            >
+                <ListItemButton
+                    onClick={goDashboard}
+                    sx={{
+                        mb: 0.5,
+                        borderRadius: 2,
+                        position: "relative",
+                        "&.active, &:active": { bgcolor: "grey.100" },
+                    }}
+                >
+                    <ListItemIcon sx={{ minWidth: 36 }}><DashboardIcon /></ListItemIcon>
+                    <ListItemText primary="Dashboard" />
+                </ListItemButton>
+
+                {/* Review: preserve ?course=&term= */}
+                <ListItemButton
+                    component={NavLink}
+                    to={{ pathname: "/new", search: location.search }}
+                    onClick={onClose}
+                    sx={{
+                        mb: 0.5,
+                        borderRadius: 2,
+                        "&.active": { bgcolor: "grey.100" },
+                    }}
+                >
+                    <ListItemIcon sx={{ minWidth: 36 }}><RateReviewIcon /></ListItemIcon>
+                    <ListItemText primary="Review" />
+                </ListItemButton>
             </List>
-            <Divider />
-            <List>
-                {['Project 1', 'Mid Term Exam', 'Final exam'].map((text) => (
-                    <ListItem key={text} disablePadding>
-                        <ListItemButton>
-                            <ListItemIcon>
-                                {getIconForItem(text)}
-                            </ListItemIcon>
-                            <ListItemText primary={text} />
-                        </ListItemButton>
-                    </ListItem>
-                ))}
-            </List>
+            <Box sx={{ flexGrow: 1 }} />
         </Box>
-    );
+    ), [location.search, onClose, course, term]);
 
     return (
-        <div>
-            <IconButton
-                size="large"
-                edge="start"
-                color="inherit"
-                aria-label="menu"
-                sx={{ mr: 2 }}
-                onClick={toggleDrawer(true)}
+        <>
+            <Drawer
+                variant="permanent"
+                open
+                sx={{
+                    display: { xs: "none", md: "block" },
+                    "& .MuiDrawer-paper": {
+                        width: SIDEBAR_WIDTH,
+                        boxSizing: "border-box",
+                        position: "fixed",
+                        top: `${topOffset}px`,
+                        left: 0,
+                        height: `calc(100vh - ${topOffset}px)`,
+                        // borderColor: "transparent",
+                    },
+                }}
             >
-                <MenuIcon sx={{ fontSize: 40 }} />   {/* Bigger icon */}
-            </IconButton>
-
-            <Drawer open={open} onClose={toggleDrawer(false)}>
-                {DrawerList}
+                {content}
             </Drawer>
-        </div>
+        </>
     );
 }

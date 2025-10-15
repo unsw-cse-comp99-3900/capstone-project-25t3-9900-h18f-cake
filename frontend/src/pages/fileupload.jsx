@@ -17,10 +17,10 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 const STEP_LABELS = [
     "Step 1: Assignment Information",
     "Step 2: Marking Guidelines",
-    "Step 3: Assignment Marked by Coordinator",
-    "Step 4: Score Marked by Coordinator",
-    "Step 5: Assignment Marked by Tutor",
-    "Step 6: Score Marked by Tutor",
+    "Step 3: Assignment submission 10%",
+    "Step 4: Marked by Coordinator",
+    "Step 5: Assignment submission 90%",
+    "Step 6: Marked by Tutor",
     "Review & Submit",
 ];
 
@@ -605,10 +605,10 @@ function ReviewSection({ uploads, assignmentName }) {
                 {renderList(1, "Marking Guidelines")}
 
                 {/* Show numbers only for Coordinator & Tutor */}
-                {renderCount(2, "Assignment Marked by Coordinator")}
-                {renderCount(3, "Score Marked by Coordinator")}
-                {renderCount(4, "Assignment Marked by Tutor")}
-                {renderCount(5, "Score Marked by Tutor")}
+                {renderCount(2, "Assignment Submission 10%")}
+                {renderCount(3, "Marked by Coordinator")}
+                {renderCount(4, "Assignment Submission 90%")}
+                {renderCount(5, "Marked by Tutor")}
             </Stack>
         </Box>
     );
