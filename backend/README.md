@@ -6,61 +6,66 @@ backend activate command: poetry run uvicorn app.main:app --reload --host 127.0.
 
 ```mermaid
 erDiagram
-    USERS ||--o{ COURSES : owns
-    COURSES ||--o{ ASSIGNMENTS : has
-    ASSIGNMENTS ||--o{ SUBMISSIONS : receives
-    SUBMISSIONS ||--o{ SUBMISSION_FILES : contains
-    USERS ||--o{ SUBMISSIONS : created_by
-    USERS ||--o{ SUBMISSION_FILES : uploaded_by
+  USERS ||--o{ COURSES : owns
+  COURSES ||--o{ ASSIGNMENTS : has
+  ASSIGNMENTS ||--o{ SUBMISSIONS : receives
+  SUBMISSIONS ||--o{ SUBMISSION_FILES : contains
+  USERS ||--o{ SUBMISSIONS : created_by
+  USERS ||--o{ SUBMISSION_FILES : uploaded_by
 
-    USERS {
-      INT id PK
-      STRING email UNIQUE
-      STRING password_hash
-      STRING role
-      DATETIME created_at
-    }
+  USERS {
+    int id PK
+    string email UK
+    string password_hash
+    string role
+    date created_at
+  }
 
-    COURSES {
-      INT id PK
-      STRING code
-      STRING name
-      STRING term
-      INT owner_id FK
-    }
+  COURSES {
+    int id PK
+    string code
+    string name
+    string term
+    int owner_id FK
+  }
 
-    ASSIGNMENTS {
-      INT id PK
-      INT course_id FK
-      STRING title
-      TEXT rubric_json
-      TEXT spec_url
-      TEXT meta_json
-    }
+  ASSIGNMENTS {
+    int id PK
+    int course_id FK
+    string title
+    string rubric_json
+    string spec_url
+    string meta_json
+  }
 
-    SUBMISSIONS {
-      INT id PK
-      INT assignment_id FK
-      STRING assignment_name
-      STRING course
-      STRING term
-      INT created_by FK
-      ENUM status "DRAFT, WAIT_COORDINATOR, WAIT_TUTOR, READY_FOR_REVIEW, COMPLETED"
-      STRING student_id
-      DATETIME created_at
-      DATETIME updated_at
-    }
+  SUBMISSIONS {
+    int id PK
+    int assignment_id FK
+    string assignment_name
+    string course
+    string term
+    int created_by FK
+    string status
+    string student_id
+    date created_at
+    date updated_at
+  }
 
-    SUBMISSION_FILES {
-      INT id PK
-      INT submission_id FK
-      INT step_index
-      ENUM actor_role "COORDINATOR, TUTOR"
-      ENUM part_kind "ASSIGNMENT, SCORE"
-      STRING filename
-      STRING path
-      STRING mime
-      INT size
-      INT uploaded_by FK
-      DATETIME uploaded_at
-    }
+  SUBMISSION_FILES {
+    int id PK
+    int submission_id FK
+    int step_index
+    string actor_role
+    string part_kind
+    string filename
+    string path
+    string mime
+    int size
+    int uploaded_by FK
+    date uploaded_at
+  }
+
+  %% Notes:
+  %% - status: DRAFT | WAIT_COORDINATOR | WAIT_TUTOR | READY_FOR_REVIEW | COMPLETED
+  %% - actor_role: COORDINATOR | TUTOR
+  %% - part_kind: ASSIGNMENT | SCORE
