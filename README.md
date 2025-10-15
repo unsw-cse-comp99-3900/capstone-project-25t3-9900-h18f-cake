@@ -11,29 +11,47 @@ This project is an **Automated Assignment Grading System** that combines:
 ```
 AI_Module/
 ├─ data/
-│   ├─ raw/              # Raw PDF/Word assignments
-│   └─ processed/        # Preprocessed CSV files
+│   ├── raw/                       # Raw PDF/Word assignments
+│   └── marked/                    # Marks of  PDF/Word assignments
+│       ├── marks                  # Scoring by convenor
+│       └── assignments            # Scored assignments
 ├─ models/
-│   └─ dnn_model.pt      # Trained models (long-term storage)
-├─ artifacts/
-│   ├─ faiss.index       # Embedding index
-│   └─ meta.json         # Metadata for embeddings
+│   └── dnn_model.pt               # Trained models (long-term storage)
+├─ artifacts/                                                         
+│       └── z1234567. txt
+│   ├── chunks                     # Chunker output dir
+│       └── z1234567.json
+│   ├── chunk_embeddings           # Embedder of assignment dir
+│       └── z1234567.npy 
+│   ├── rubric                     # All files for rubric
+│       ├── rubric_kw_final.json     
+│       ├── rubric_embeddings.npy
+│       ├── faiss.index
+│       └── meta.json              # Include idx2rubric, shape, model name
+│   ├── rubric2chunks              # Rubric -> chunks idx
+│       └── z1234567. txt
+│   └── rubric2text                # Rubric -> chunks text
+│       └── z1234567. txt
 ├─ results/
-│   ├─ llm_scores.csv    # Raw LLM scoring results
-│   └─ final_scores.csv  # Final fused & calibrated scores
-├─ scripts/              # Step-wise runnable scripts
-├─ src/                  # Core source code (preprocessing, models, etc.)
-│   ├─ preprocess        # Data preprocessing
-│       ├─ Loader.py     # Load raw data
-│       ├─ Clean.py      # Unified format
-│       └─ Chunker.py    # Segment text to chunks
-│   ├─ rubric_retriever  # Similarities retriever
-│       ├─ keywords_gen.py     # Rubric keywords generation 
-│       ├─ Embedder.py      # Transfer chunked-text/rubric kw to embeddings
-│       └─ Retriever.py    # Embedding index/similarities calculation
-├─ main.py               # Main entry point
-├─ requirements.txt      # Python dependencies
-└─ README.md             # Project documentation
+│   └── z1234567/ 
+│       ├── retrieval_result.json  # Dimension-to-chunk mapping
+│       ├── llm_scores.csv         # Raw LLM scoring results
+│       └── final_scores.csv       # Final fused & calibrated scores
+├─ scripts/                        # Step-wise runnable scripts
+│   ├── pipeline.py                # Integration of preprocess & rubric_retriever   ✅
+│   └── config.py                                                                   ✅ 
+├─ src/                            # Core source code (preprocessing, models, etc.) ✅
+│   ├── preprocess                 # Data preprocessing                             ✅
+│       ├── Loader.py              # Load raw data                                  ✅
+│       ├── Clean.py               # Unified format                                 ✅
+│       └── Chunker.py             # Segment text to chunks                         ✅
+│   └── rubric_retriever           # Similarities retriever                         ✅
+│       ├── keywords_gen.py        # Rubric keywords generation                     ✅
+│       ├── Embedder.py            # Transfer chunked-text/rubric kw to embeddings  ✅
+│       └── Retriever.py           # Embedding index/similarities calculation       ✅
+├─ main.py                         # Main entry point
+├─ requirements.txt                # Python dependencies
+└─ README.md                       # Project documentation
 ```
 ---
 

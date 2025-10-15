@@ -1,5 +1,6 @@
 # from Loader import DataLoader
 import re, html, unicodedata, string
+import json
 import os
 '''
 used for cleaning
@@ -21,7 +22,7 @@ class TextCleaner:
         self.num_head  = re.compile(r"^\s*(\d+[\.\)]|\(\d+\)|[IVXLCM]+\.)\s+")
         self.trail_col = re.compile(r"[:：]\s*$")
         self.punct     = re.compile(r"[^\w\s]")  
-        print('initial finished')
+        # print('initial finished')
 #(1) hyphenation & diplicate
     def fix_hyphenation(self, text):
         return self.hyphen_break.sub(r"\1\2", text)
@@ -125,6 +126,19 @@ class TextCleaner:
             cleaned_paras.append({"para_id": i, "text": para})
 
         return {"full_text": text['full_text'], "paragraphs": cleaned_paras}
+    
+    def save_file(self, text_cleaned, path_full, path_para):
+        os.makedirs(os.path.dirname(path_full), exist_ok=True)
+        os.makedirs(os.path.dirname(path_para), exist_ok=True)
+
+        with open(path_full, "w", encoding="utf-8") as f:
+            json.dump({"Rubric_full_text": text_cleaned.get("full_text", "")}, f, ensure_ascii=False, indent=2)
+
+        with open(path_para, "w", encoding="utf-8") as f:
+            json.dump(text_cleaned.get("paragraphs", []), f, ensure_ascii=False, indent=2)
+
+        print(f"\t[OK] Saved cleaned full file to:  {path_full}.")
+        print(f"\t[OK] Saved paragraphs file to:  {path_para}.")
 
 #用于测试
 if __name__ == "__main__":

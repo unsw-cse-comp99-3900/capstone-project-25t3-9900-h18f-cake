@@ -147,7 +147,7 @@ class DataLoader:
         elif file_form == ".pdf":
             file_txt = self.load_pdf(path)
             use_ocr = self.file_scanned(file_txt)
-            print('[USE_OCR]',use_ocr)
+            print('\t[USE_OCR]',use_ocr)
             if use_ocr:
                 file_txt = self.ocr_pdf(path)
             # print(file_txt)
