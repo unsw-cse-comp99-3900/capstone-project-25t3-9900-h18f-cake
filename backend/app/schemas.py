@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, constr
-from typing import Optional
+from typing import List, Optional
+from .models import SubmissionStatus, ActorRole, PartKind
 
 class TokenOut(BaseModel):
     access_token: str
@@ -15,6 +16,7 @@ class UserOut(BaseModel):
         from_attributes = True
 
 class CourseIn(BaseModel):
+    code: str
     name: str
     term: Optional[str] = None
 
@@ -34,16 +36,44 @@ class AssignmentIn(BaseModel):
 
 class AssignmentOut(AssignmentIn):
     id: int
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
 
 class SubmissionOut(BaseModel):
     id: int
     assignment_id: int
     student_id: str
-    file_url: str
-    status: str
-    class Config: from_attributes = True
+    path: str
+    status: str 
+    class Config:
+        from_attributes = True
+
+class SubmissionFileOut(BaseModel):
+    id: int
+    step_index: int
+    filename: str
+    path: str
+    mime: Optional[str] = None
+    size: Optional[int] = None
+    actor_role: ActorRole
+    part_kind: PartKind
+
+    class Config:
+        from_attributes = True
+
+class SubmissionDetailOut(BaseModel):
+    id: int
+    assignment_name: str
+    course: str
+    term: str | None = None
+    status: SubmissionStatus
+    student_id: Optional[str] = None
+    files: List[SubmissionFileOut] = []
+
+    class Config:
+        from_attributes = True
+
 
 class UserClaims(BaseModel):
     sub: str
-    role: Optional[str] = None 
+    role: Optional[str] = None
