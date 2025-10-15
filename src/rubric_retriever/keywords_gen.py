@@ -14,17 +14,14 @@ output format:
 {'dimension':['a','b','c...']}, 
 '''
 class RubricExtraction:
-    def __init__(self,
-        sbert_model: str = "all-MiniLM-L6-v2",
-        llm_model: str = "gpt-4o-mini",#
-        api_key_env: str = "OPENAI_API_KEY"):
+    def __init__(self, sbert_model, llm_model, api_key_env):
 
         self.sbert = SentenceTransformer(sbert_model)
         self.kw_model = KeyBERT(model=self.sbert)
         api_key = os.getenv(api_key_env)
         self.client = OpenAI(api_key=api_key) if api_key else None
         self.llm_model = llm_model
-        print('init finished')
+
     def extract_keybert(self, text, top_n, diversity):
         rubric_requirements = {}
         rubric_kw = {}
@@ -35,7 +32,7 @@ class RubricExtraction:
                 rubric_requirements[requirements[0]] = requirements[-1]
         for req in rubric_requirements:
             if rubric_requirements[req]:
-                print('---',rubric_requirements[req])
+                # print('---',rubric_requirements[req])
                 keywords = self.kw_model.extract_keywords(rubric_requirements[req],
                                 keyphrase_ngram_range=(1, 3),
                                 stop_words="english", use_mmr=True,
@@ -43,6 +40,7 @@ class RubricExtraction:
                                 top_n=top_n)
                 rubric_kw[req] = [i[0] for i in keywords]
         return rubric_kw
+    
     def expand_with_llm(self, dimension, rubric_kw_d, per_term_max) :
         if not self.client:
             print("[WARN] No OpenAI API key found, skipping LLM expansion.")
@@ -78,28 +76,29 @@ class RubricExtraction:
                 elif isinstance(item, str):
                     flattened.append(item)
             merged = list(dict.fromkeys(rubric_kw_d + flattened))  # 去重保序
-            print('-1-',merged)
+            # print('-1-',merged)
             return merged
         except Exception as e:
             print("[WARN] LLM expansion failed:", e)
             return rubric_kw_d
-    def save_json(self, data):
-        output_path = "data/rubric/rubric_kw_final.json"
+        
+    def save_json(self, data, output_path):
+
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"[OK] Saved rubric keywords to: {output_path}")
-    def process(self, text, use_llm):
+        print(f"\t[OK] Saved rubric keywords to: {output_path}")
+
+    def process(self, text, use_llm, top_n, diversity,per_term_max, path):
         results = {}
-        top_n, diversity = 10, 0.7
         keywords = self.extract_keybert(text, top_n, diversity)
         # print(keywords)
         for dimension,rubric_kw_d in keywords.items():
-            print(dimension,rubric_kw_d)
+            # print(dimension,rubric_kw_d)
             if use_llm:
-                kw_expand = self.expand_with_llm(dimension, rubric_kw_d, 10)
+                kw_expand = self.expand_with_llm(dimension, rubric_kw_d, per_term_max)
             results[dimension] = kw_expand
-        self.save_json(results)
+        self.save_json(results, path)
         return results
 #############used for test#############
 # if __name__ == "__main__":
