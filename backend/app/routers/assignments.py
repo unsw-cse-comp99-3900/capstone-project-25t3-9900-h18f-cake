@@ -1,28 +1,144 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
+import os, shutil, re
+from datetime import datetime
+from pathlib import Path
+
 from ..db import get_db
 from .. import models, schemas
-from ..deps import require_role
-from ..deps import get_current_user, UserClaims
+from ..deps import get_current_user
+from ..config import settings
+from ..utils.file_utils import save_meta_json
 
 router = APIRouter(prefix="/v1/assignments", tags=["assignments"])
 
-@router.post("/", response_model=schemas.AssignmentOut)
-def create_assignment(payload: schemas.AssignmentIn,
-                      db: Session = Depends(get_db),
-                      me: UserClaims = Depends(get_current_user)):
-    course = db.get(models.Course, payload.course_id)
-    if not course:
-        raise HTTPException(400, "Course not found")
-    if course.owner_id != int(me.sub):
-        raise HTTPException(403, "Not your course")
-    a = models.Assignment(**payload.model_dump())
-    db.add(a); db.commit(); db.refresh(a)
+def _slugify(value: str) -> str:
+    value = value.strip().lower()
+    value = re.sub(r"[^\w\s-]", "", value)
+    value = re.sub(r"[\s-]+", "-", value)
+    return value
+
+def _course_term_dir(course: str, term: str) -> str:
+    c = _slugify(course)
+    t = _slugify(term) if term else "noterm"
+    return f"{c}-{t}"
+
+def _assignment_dir(course: str, term: str, title: str, assignment_id: int) -> Path:
+    slug = f"{_slugify(title)}-{assignment_id}"
+    return settings.upload_root / _course_term_dir(course, term) / slug 
+
+@router.post("/create_with_files", response_model=schemas.AssignmentOut)
+def create_assignment_with_files(
+    course: str = Form(...),
+    term: str = Form(""),
+    title: str = Form(...),
+    step1: UploadFile = File(...),
+    step2: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    me = Depends(get_current_user),
+):
+    norm_term = (term or "").strip() or None
+    q = (
+        db.query(models.Course)
+        .filter(
+            models.Course.owner_id == int(me.sub),
+            or_(models.Course.code == course, models.Course.name == course),
+            models.Course.term == norm_term,
+        )
+    )
+    course_row = q.first()
+    if not course_row:
+        raise HTTPException(status_code=400, detail="Course not found")
+
+    a = models.Assignment(course_id=course_row.id, title=title)
+    db.add(a)
+    db.flush()
+
+    base: Path = _assignment_dir(course, term, title, a.id)
+    spec_dir = base / "spec"
+    rubric_dir = base / "rubric"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    rubric_dir.mkdir(parents=True, exist_ok=True)
+
+    spec_suffix = Path(step1.filename).suffix or ".pdf"
+    rubric_suffix = Path(step2.filename).suffix or ".pdf"
+    spec_path = spec_dir / f"specification{spec_suffix}"
+    rubric_path = rubric_dir / f"rubric{rubric_suffix}"
+
+    with open(spec_path, "wb") as f:
+        shutil.copyfileobj(step1.file, f)
+    with open(rubric_path, "wb") as f:
+        shutil.copyfileobj(step2.file, f)
+
+    meta = {
+        "assignment_id": a.id,
+        "course": course,
+        "term": term,
+        "title": title,
+        "spec_path": str(spec_path),
+        "rubric_path": str(rubric_path),
+        "spec_url": None,
+        "rubric_url": None,
+        "created_by": me.sub,
+    }
+    meta_path = save_meta_json(base, meta)
+    a.spec_url = str(meta_path)
+
+    db.commit()
+    db.refresh(a)
     return a
 
-@router.get("/", response_model=list[schemas.AssignmentOut])
-def list_assignments(course_id: int | None = None, db: Session = Depends(get_db)):
-    q = db.query(models.Assignment)
-    if course_id:
-        q = q.filter(models.Assignment.course_id == course_id)
-    return q.all()
+
+@router.put("/{assignment_id}/files", response_model=schemas.AssignmentOut)
+def update_assignment_files(
+    assignment_id: int,
+    spec: UploadFile | None = File(None),
+    rubric: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    me = Depends(get_current_user),
+):
+    a = db.get(models.Assignment, assignment_id)
+    if not a:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    base = Path(a.spec_url).parent if a.spec_url else (settings.upload_root / "assignments" / str(a.id))
+    spec_dir = base / "spec"
+    rubric_dir = base / "rubric"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    rubric_dir.mkdir(parents=True, exist_ok=True)
+
+    def _ensure_pdf(u: UploadFile):
+        if (Path(u.filename).suffix.lower() != ".pdf") or ((u.content_type or "").lower() != "application/pdf"):
+            raise HTTPException(status_code=400, detail="Only PDF is accepted")
+        head = u.file.read(5); u.file.seek(0)
+        if head != b"%PDF-":
+            raise HTTPException(status_code=400, detail="Invalid PDF file")
+
+    if spec:
+        _ensure_pdf(spec)
+        for p in spec_dir.glob("*.pdf"):
+            p.unlink(missing_ok=True)
+        dest = spec_dir / "specification.pdf"
+        with open(dest, "wb") as f:
+            shutil.copyfileobj(spec.file, f)
+
+    if rubric:
+        _ensure_pdf(rubric)
+        for p in rubric_dir.glob("*.pdf"):
+            p.unlink(missing_ok=True)
+        dest = rubric_dir / "rubric.pdf"
+        with open(dest, "wb") as f:
+            shutil.copyfileobj(rubric.file, f)
+
+    meta = {
+        "assignment_id": a.id,
+        "spec_path": str(spec_dir / "specification.pdf") if spec else None,
+        "rubric_path": str(rubric_dir / "rubric.pdf") if rubric else None,
+        "updated_at": datetime.utcnow().isoformat(),
+    }
+    meta_path = save_meta_json(base, meta)
+    a.spec_url = str(meta_path)
+
+    db.commit()
+    db.refresh(a)
+    return a

@@ -36,7 +36,7 @@ export default function CoursesPage() {
       .then((data) => {
         const mapped = (Array.isArray(data) ? data : []).map((c) => ({
           _id: c.id,
-          code: c.name,
+          code: c.code,
           title: c.name,
           year_term: c.term || "untitled",
         }));
@@ -96,20 +96,18 @@ export default function CoursesPage() {
   };
 
   const handleAddCourse = (newCourse) => {
-    const name = newCourse?.title || newCourse?.code || newCourse?.name || "";
-    const term = newCourse?.year_term || newCourse?.term || "";
-
-    if (!name.trim()) {
-      toast.error("Course name is required");
-      return;
-    }
+  const code = (newCourse?.code || "").trim();
+  const name = (newCourse?.title || newCourse?.name || "").trim();
+  const term = (newCourse?.year_term || newCourse?.term || "").trim();
+  if (!code) { toast.error("Course code is required"); return; }
+  if (!name) { toast.error("Course name is required"); return; }
 
     API.courses
-      .create({ name: name.trim(), term: term.trim() || undefined })
+      .create({ code, name, term: term || undefined })   
       .then((created) => {
         const mapped = {
           _id: created.id,
-          code: created.name,
+          code: created.code,
           title: created.name,
           year_term: created.term || "untitled",
         };

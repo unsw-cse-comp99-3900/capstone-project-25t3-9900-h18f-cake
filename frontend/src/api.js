@@ -59,18 +59,50 @@ export const auth = {
 export const assignments = {
   list: (params = {}) => {
     const q = new URLSearchParams(params).toString();
-    return GET(`/v1/assignments${q ? `?${q}` : ""}`);
+        return GET(`/v1/assignments/${q ? `?${q}` : ""}`); 
   },
-  create: (payload) => POST("/v1/assignments/", payload),
+
+  createWithFiles: ({ course, term = "", title, step1, step2 }) => {
+    const fd = new FormData();
+    fd.append("course", course);
+    fd.append("term", term);
+    fd.append("title", title);
+    fd.append("step1", step1); 
+    fd.append("step2", step2); 
+    return POST("/v1/assignments/create_with_files", fd);
+  },
+
+  updateFiles: (assignmentId, { spec, rubric } = {}) => {
+    const fd = new FormData();
+    if (spec) fd.append("spec", spec);
+    if (rubric) fd.append("rubric", rubric);
+    return request(`/v1/assignments/${assignmentId}/files`, { method: "PUT", body: fd });
+  },
 };
 
 export const submissions = {
-  upload: (assignmentId, studentId, file) => {
+  bulkUpload: (assignmentId, assignmentName, course, term, files) => {
     const fd = new FormData();
-    fd.append("assignment_id", String(assignmentId));
-    fd.append("student_id", studentId);
-    fd.append("file", file);
-    return POST("/v1/submissions/upload", fd);
+    fd.append("assignmentId", String(assignmentId));
+    fd.append("assignmentName", assignmentName);
+    fd.append("course", course);
+    fd.append("term", term || "");
+    for (const f of files) fd.append("files", f);
+    return POST("/v1/submissions/bulk", fd);
+  },
+  appendFiles: (submissionId, stepIndex, files, studentId) => {
+    const fd = new FormData();
+    fd.append("stepIndex", String(stepIndex));
+    if (studentId) fd.append("studentId", studentId);
+    for (const f of files) fd.append("files", f);
+    return request(`/v1/submissions/${submissionId}/files`, {
+      method: "PUT",
+      body: fd,
+    });
+    
+  },
+  create: (formData) => {
+  return request("/v1/submissions", { method: "POST", body: formData });
   },
 };
 
