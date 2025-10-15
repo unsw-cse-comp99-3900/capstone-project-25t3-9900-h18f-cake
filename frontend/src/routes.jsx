@@ -4,7 +4,7 @@ import CoursesPage from "./pages/course";
 import FileUpload from "./pages/fileupload";
 import { AuthProvider } from "./context/auth-context";
 import { Toaster } from "sonner";
-import Dashboard from "./pages/dashboard";
+import Dashboard from "./pages/airesult";
 
 export default function PageRoutes() {
     return (
@@ -14,7 +14,7 @@ export default function PageRoutes() {
                     <Route path="/" element={<LoginMain />} />
                     <Route path="/courses" element={<CoursesPage />} />
                     <Route path="/fileupload" element={<FileUpload />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/airesult" element={<Dashboard />} />
 
                 </Routes>
                 <Toaster position="top-right" richColors closeButton />
