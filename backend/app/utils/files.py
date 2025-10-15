@@ -4,7 +4,7 @@ from fastapi import UploadFile, HTTPException
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-ALLOWED = {"pdf","doc","docx","txt"}
+ALLOWED = {"pdf"}
 
 def _assert_allowed(filename: str):
     ext = filename.rsplit(".", 1)[-1].lower()
