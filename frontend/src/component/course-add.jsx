@@ -7,8 +7,6 @@ import {
     // Box, Chip
 } from "@mui/material";
 import { toast } from "sonner";
-import { API_URL } from "../common/const";
-import { handleFetch } from "../common/utils";
 
 export default function CourseAdd({ open, onClose, onAdd }) {
 
@@ -48,23 +46,7 @@ export default function CourseAdd({ open, onClose, onAdd }) {
         const year_term = `${year.trim()} ${formattedTerm}`;
         const newCourse = { year_term, code: code.trim(), title: title.trim() };
         const who = user?.email || user?.name || "Unknown user";
-
-        // API sync request to backend
-        handleFetch(`${API_URL}/v1/courses`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(newCourse),
-        }).then((result) => {
-            if (result.ok) {
-                console.log(`User: ${who} has successfully added course ${code}, ${title}, ${year_term}`);
-                toast.success(`Added ${code} — ${title} (${year_term}) successfully!`);
-            } else {
-                console.log(`Failed to add course: ${result.statusText}`);
-                toast.error(`Failed to add course: ${result.statusText}`);
-            }
-        })
+        
         onAdd?.(newCourse);
         resetForm();
     };
