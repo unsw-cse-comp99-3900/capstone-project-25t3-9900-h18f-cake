@@ -124,7 +124,7 @@ export default function MultiStepUpload() {
         const rubric = (uploads[1] || [])[0];
         const data = await API.assignments.createWithFiles({ course, term, title: assignmentName, step1: spec, step2: rubric });
         setAssignmentId(data.id);
-        toast.success("Assignment created.");
+        toast.success("Assignment " + data.title + " is created");
       }
 
       if (activeStep === 2) {
@@ -203,7 +203,7 @@ export default function MultiStepUpload() {
     if (activeStep === 0) navigate("/courses", { replace: true });
     else setActiveStep((s) => s - 1);
   };
-  const onSubmit = () => { toast.success("All done!"); navigate("/courses", { replace: true }); };
+  const onSubmit = () => { toast.success(`User ${user} has successfully uploaded assignment ${assignmentName}`); navigate("/courses", { replace: true }); };
 
   return (
     <Box sx={{ minHeight: "100svh", display: "grid", placeItems: "center", px: { xs: 2, sm: 4, md: 8 }, bgcolor: "grey.100" }}>
