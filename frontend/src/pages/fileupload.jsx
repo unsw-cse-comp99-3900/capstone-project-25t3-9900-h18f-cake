@@ -13,13 +13,13 @@ import { useAuth } from "../context/auth-context";
 import API from "../api";
 
 const STEP_LABELS = [
-  "Step 1: Assignment Information",
-  "Step 2: Marking Guidelines",
-  "Step 3: Assignment Marked by Coordinator",
-  "Step 4: Score Marked by Coordinator",
-  "Step 5: Assignment Marked by Tutor",
-  "Step 6: Score Marked by Tutor",
-  "Review & Submit",
+    "Step 1: Assignment Information",
+    "Step 2: Marking Guidelines",
+    "Step 3: Assignment Marked by Coordinator",
+    "Step 4: Marked by Coordinator",
+    "Step 5: Assignment Marked by Tutor",
+    "Step 6: Marked by Tutor",
+    "Review & Submit",
 ];
 
 function fileKey(f) {
@@ -124,7 +124,7 @@ export default function MultiStepUpload() {
         const rubric = (uploads[1] || [])[0];
         const data = await API.assignments.createWithFiles({ course, term, title: assignmentName, step1: spec, step2: rubric });
         setAssignmentId(data.id);
-        toast.success("Assignment created.");
+        toast.success("Assignment " + data.title + " is created");
       }
 
       if (activeStep === 2) {
@@ -203,7 +203,7 @@ export default function MultiStepUpload() {
     if (activeStep === 0) navigate("/courses", { replace: true });
     else setActiveStep((s) => s - 1);
   };
-  const onSubmit = () => { toast.success("All done!"); navigate("/courses", { replace: true }); };
+  const onSubmit = () => { toast.success(`User ${user} has successfully uploaded assignment ${assignmentName}`); navigate("/courses", { replace: true }); };
 
   return (
     <Box sx={{ minHeight: "100svh", display: "grid", placeItems: "center", px: { xs: 2, sm: 4, md: 8 }, bgcolor: "grey.100" }}>
@@ -362,12 +362,35 @@ function ReviewSection({ uploads, assignmentName }) {
   const renderCount = (idx, title) => {
     const count = uploads[idx]?.length ?? 0;
     return (
-      <Paper variant="outlined" sx={{ p: 2, borderRadius: "12px", borderColor: "grey.300" }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{title}</Typography>
-          <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 700 }}>Total File{count === 1 ? "" : "s"}: {count}</Typography>
-        </Stack>
-      </Paper>
+        <Box>
+            <Box
+                sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    minHeight: 56,
+                    borderBottom: "1px solid",
+                    borderColor: "grey.200",
+                    px: 1,
+                    mb: 2,
+                }}
+            >
+                <Typography variant="h6" sx={{ fontWeight: 700, m: 0 }}>
+                    Assignment Name: {assignmentName}
+                </Typography>
+            </Box>
+
+            <Stack spacing={2}>
+                {/* Keep full lists for the first two */}
+                {renderList(0, "Assignment Information")}
+                {renderList(1, "Marking Guidelines")}
+
+                {/* Show numbers only for Coordinator & Tutor */}
+                {renderCount(2, "Assignment Marked by Coordinator")}
+                {renderCount(3, "Marked by Coordinator")}
+                {renderCount(4, "Assignment Marked by Tutor")}
+                {renderCount(5, "Marked by Tutor")}
+            </Stack>
+        </Box>
     );
   };
   return (
