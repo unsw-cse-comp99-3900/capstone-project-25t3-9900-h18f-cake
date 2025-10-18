@@ -360,7 +360,7 @@ function ReviewSection({ uploads, assignmentName }) {
     </Paper>
   );
   const renderCount = (idx, title) => {
-    const count = uploads[idx]?.length ?? 0;
+    // const count = uploads[idx]?.length ?? 0;
     return (
         <Box>
             <Box
