@@ -41,7 +41,7 @@ export default function LoginMain() {
 
     return (
         <Box sx={{ minHeight: "100svh", display: "grid", placeItems: "center", p: { xs: 2, sm: 3 }, bgcolor: "#ffffff" }}>
-            <Card elevation={0} sx={{ width: { xs: "100%", sm: 520 }, height: { xs: "100%", sm: 520 }, borderRadius: "16px", bgcolor: "#eef3f8", boxShadow: "0 12px 30px rgba(2,6,23,0.08)" }}>
+            <Card elevation={0} sx={{ width: { xs: "100%", sm: 520 }, height: { xs: "100%", sm: "auto" }, borderRadius: "16px", bgcolor: "#eef3f8", boxShadow: "0 12px 30px rgba(2,6,23,0.08)" }}>
                 <CardContent sx={{ p: { xs: 3, sm: 5 } }}>
                     <Typography variant="h4" align="center" sx={{ fontWeight: 800, mb: 1 }}>Welcome back</Typography>
                     <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 5 }}>
@@ -121,6 +121,28 @@ export default function LoginMain() {
                             ) : (
                                 "Sign in"
                             )}
+                        </Button>
+                        
+                        {/* register buttomn */}
+                        <Button
+                            variant="outlined"
+                            fullWidth
+                            onClick={() => navigate("/register")}
+                            sx={{
+                                py: 1.25,
+                                borderRadius: "12px",
+                                textTransform: "none",
+                                fontWeight: 700,
+                                mt: 2,
+                                color: "#0f172a",
+                                borderColor: "#0f172a",
+                                "&:hover": {
+                                    bgcolor: "rgba(15, 23, 42, 0.04)",
+                                    borderColor: "#0b1220",
+                                },
+                            }}
+                        >
+                            Create an account
                         </Button>
                     </Box>
                 </CardContent>

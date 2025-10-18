@@ -20,13 +20,25 @@ export function AuthProvider({ children }) {
         }
     }
 
+    async function register(email, password) {
+        setError(null);
+        try {
+            const res = await authApi.register(email, password);
+            return { success: true, data: res };
+        } catch (e) {
+            const msg = e?.message || "Registration failed";
+            setError(msg);
+            return { success: false, message: msg };
+        }
+    }
+
     function logout() {
         clearToken();
         setTokenState(null);
         setError(null);
     }
 
-    const value = useMemo(() => ({ token, error, login, logout }), [token, error]);
+    const value = useMemo(() => ({ token, error, login, register, logout }), [token, error]);
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
