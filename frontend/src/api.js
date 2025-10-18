@@ -45,8 +45,8 @@ export const health = {
 };
 
 export const auth = {
-    register: (email, password, role = "coordinator") =>
-        POST("/v1/auth/register", { email, password, role }),
+    register: (email, password) =>
+        POST("/v1/auth/register", { email, password}),
     login: async (email, password) => {
         const data = await POST("/v1/auth/login", { email, password });
         if (data?.access_token) setToken(data.access_token);
