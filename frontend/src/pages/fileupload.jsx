@@ -359,40 +359,27 @@ function ReviewSection({ uploads, assignmentName }) {
       )}
     </Paper>
   );
-  const renderCount = (idx, title) => {
-    // const count = uploads[idx]?.length ?? 0;
+
+  // fix the bug here render file count but not the file list
+  const renderFileCount = (idx, title) => {
+    const count = uploads[idx]?.length ?? 0;
     return (
-        <Box>
-            <Box
-                sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    minHeight: 56,
-                    borderBottom: "1px solid",
-                    borderColor: "grey.200",
-                    px: 1,
-                    mb: 2,
-                }}
-            >
-                <Typography variant="h6" sx={{ fontWeight: 700, m: 0 }}>
-                    Assignment Name: {assignmentName}
-                </Typography>
-            </Box>
-
-            <Stack spacing={2}>
-                {/* Keep full lists for the first two */}
-                {renderList(0, "Assignment Information")}
-                {renderList(1, "Marking Guidelines")}
-
-                {/* Show numbers only for Coordinator & Tutor */}
-                {renderCount(2, "Assignment Marked by Coordinator")}
-                {renderCount(3, "Marked by Coordinator")}
-                {renderCount(4, "Assignment Marked by Tutor")}
-                {renderCount(5, "Marked by Tutor")}
-            </Stack>
-        </Box>
+      <Paper variant="outlined" sx={{ p: 2, borderRadius: "12px", borderColor: "grey.300" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {count} file{count !== 1 ? 's' : ''} uploaded
+        </Typography>
+        {count > 0 && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+            Files: {uploads[idx].map(f => f.name).join(', ')}
+          </Typography>
+        )}
+      </Paper>
     );
   };
+
   return (
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", minHeight: 56, borderBottom: "1px solid", borderColor: "grey.200", px: 1, mb: 2 }}>
@@ -401,10 +388,10 @@ function ReviewSection({ uploads, assignmentName }) {
       <Stack spacing={2}>
         {renderList(0, "Assignment Information")}
         {renderList(1, "Marking Guidelines")}
-        {renderCount(2, "Assignment Marked by Coordinator")}
-        {renderCount(3, "Score Marked by Coordinator")}
-        {renderCount(4, "Assignment Marked by Tutor")}
-        {renderCount(5, "Score Marked by Tutor")}
+        {renderFileCount(2, "Assignment Marked by Coordinator")}
+        {renderFileCount(3, "Score Marked by Coordinator")}
+        {renderFileCount(4, "Assignment Marked by Tutor")}
+        {renderFileCount(5, "Score Marked by Tutor")}
       </Stack>
     </Box>
   );
