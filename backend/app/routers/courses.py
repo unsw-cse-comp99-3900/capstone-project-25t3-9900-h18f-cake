@@ -39,6 +39,8 @@ def create_course(
         raise HTTPException(status_code=400, detail="This course code already exists in the same term")
     
     year, spec_term = term.split("Term")
+    year = year.strip()
+    spec_term = spec_term.strip()
     spec_term = f"Term{spec_term}"
     Json_name = f"{year}_{spec_term}"
 
@@ -93,13 +95,12 @@ def delete_course(
     if c.owner_id != int(me.sub):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-
-
-
     #get the info about course code and course term
     year, spec_term = c.term.split("Term")
     spec_term = f"Term{spec_term}"
-    
+
+    year = year.strip()
+    spec_term = spec_term.strip()
     
     folder = Path("marking_result") / f"{year}_{spec_term}"
     file_path = folder / f"{c.code}.json"
