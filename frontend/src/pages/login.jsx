@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
-import {
-    Box, Card, CardContent, Typography, TextField, Button,
-    IconButton, InputAdornment, CircularProgress,
-} from "@mui/material";
+import { Box, Card, CardContent, Typography, TextField, Button, IconButton, InputAdornment, CircularProgress } from "@mui/material";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
@@ -26,10 +23,8 @@ export default function LoginMain() {
         if (!username.trim() || !password) return;
 
         setSubmitting(true);
-
         // send credentials to context for backend verification
         const result = await login(username, password);
-
         setSubmitting(false);
 
         if (result.success) {
@@ -47,7 +42,7 @@ export default function LoginMain() {
                     <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 5 }}>
                         Enter your credentials to access your account
                     </Typography>
-
+                    {/* Username */}
                     <Box component="form" noValidate onSubmit={handleSubmit}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: "#111827" }}>Username</Typography>
                         <TextField
@@ -68,7 +63,7 @@ export default function LoginMain() {
                                 "& .MuiFormHelperText-root": { backgroundColor: "transparent", m: "4px 0 0 0" },
                             }}
                         />
-
+                        {/* password */}
                         <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: "#111827" }}>Password</Typography>
                         <TextField
                             placeholder="Enter your password"
@@ -88,21 +83,23 @@ export default function LoginMain() {
                                 "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "12px" },
                                 "& .MuiFormHelperText-root": { backgroundColor: "transparent", m: "4px 0 0 0" },
                             }}
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            aria-label={showPassword ? "Hide password" : "Show password"}
-                                            onClick={() => setShowPassword((s) => !s)}
-                                            edge="end"
-                                        >
-                                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
+                            slotProps={{
+                                input: {
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                aria-label={showPassword ? "Hide password" : "Show password"}
+                                                onClick={() => setShowPassword((s) => !s)}
+                                                edge="end"
+                                            >
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                },
                             }}
                         />
-
+                        {/* submit button */}
                         <Button
                             type="submit"
                             variant="contained"
@@ -122,8 +119,8 @@ export default function LoginMain() {
                                 "Sign in"
                             )}
                         </Button>
-                        
-                        {/* register buttomn */}
+
+                        {/* register button */}
                         <Button
                             variant="outlined"
                             fullWidth
