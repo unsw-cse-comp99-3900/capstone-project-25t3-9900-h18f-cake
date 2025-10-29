@@ -2,18 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
 import { Box, Stack, Grid, IconButton, Typography } from "@mui/material";
-
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
-
 import CourseCard from "../component/course-card";
 import CourseAdd from "../component/course-add";
 import CourseDelete from "../component/course-delete";
 import CourseActionDialog from "../component/course-action";
 import ExitConfirmPopup from "../component/exit-confirm";
 import { toast } from "sonner";
-
 import API from "../api";
 
 const TOKEN_KEY = "token";
@@ -83,7 +80,7 @@ export default function CoursesPage() {
         API.courses
             .remove(id)
             .then(() => {
-                toast.success(`Deleted course ${deletedTitle}`);
+                toast.success(`Successfully deleted course ${deletedTitle}`);
             })
             .catch((e) => {
                 toast.error(e?.message || "Delete failed");
@@ -168,6 +165,8 @@ export default function CoursesPage() {
                 </Typography>
                 <Stack direction="row" spacing={2}>
                     <>
+                    
+                        {/* add course icon */}
                         <IconButton
                             sx={headerIconSx}
                             aria-label="add course"
@@ -180,6 +179,7 @@ export default function CoursesPage() {
                             <AddCircleOutlineIcon />
                         </IconButton>
 
+                        {/* Remove course icon */}
                         <IconButton
                             sx={headerIconSx}
                             aria-label="toggle delete mode"
@@ -191,6 +191,7 @@ export default function CoursesPage() {
                             <RemoveCircleOutlineIcon />
                         </IconButton>
 
+                        {/* logout icon */}
                         <IconButton
                             sx={headerIconSx}
                             aria-label="logout"
