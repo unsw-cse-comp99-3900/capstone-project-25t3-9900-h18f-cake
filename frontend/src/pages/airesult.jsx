@@ -44,7 +44,7 @@ const ALL_ROWS = [
         difference: -3, 
         feedback: "Long feedback Long feedback Long feedback...", 
         assignment: "Assignment 2",
-        needsReview: false,
+        needsReview: true,
         reviewStatus: "pending",
         reviewComments: ""
     },
@@ -238,7 +238,7 @@ function ReviewDashboard({ rows }) {
 
             {/* Current Item for Review */}
             {currentItem && (
-                <Card sx={{ mb: 2, flexGrow: 1 }}>
+                <Card sx={{ mb: 2, flexGrow: 1 ,overflowY: "auto"}}>
                     <CardContent sx={{ p: 3 }}>
                         <Stack spacing={3}>
                             {/* Header */}
@@ -475,7 +475,10 @@ export default function Airesult() {
                         pt: 4,
                         px: 4,
                         maxWidth: "90vw",
-                        maxHeight: "90vh",
+                        // mx: "auto",
+                        overflowY: "auto", // ✅ 关键：内容超出时显示垂直滚动条
+                        scrollBehavior: "smooth",               
+                        // maxHeight: "90vh",
                         mx: "auto",
                     }}
                 >
@@ -551,11 +554,11 @@ export default function Airesult() {
                             {/* Content area */}
                             <Box sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}>
                                 {variant === "studentView" ? (
-                                    <Box sx={{ width: "100%", height: "100%" }}>
+                                    <Box sx={{ width: "100%", height: "100%" ,display: "flex", flexDirection: "column", overflowY: "auto"}}>
                                         <DashboardStudent variant="studentView" rows={filteredRows} />
                                     </Box>
                                 ) : (
-                                    <Box sx={{ width: "100%", height: "80%" }}>
+                                    <Box sx={{ width: "100%", height: "80%" ,display: "flex", flexDirection: "column", overflowY: "auto"}}>
                                         <DashboardTutorScatter variant="tutorView" rows={filteredRows} />
                                     </Box>
                                 )}
