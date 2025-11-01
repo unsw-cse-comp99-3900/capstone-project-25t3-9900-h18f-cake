@@ -4,10 +4,12 @@
 2. extract metadata
 '''
 import os
-from typing import Tuple, Optional, Dict
+import zipfile
+from typing import Optional
 import fitz
 from paddleocr import PaddleOCR
 from docx import Document
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from tqdm import tqdm
 import paddle
 import numpy as np
@@ -42,17 +44,86 @@ class DataLoader:
         self.min_conf = min_conf
 
     def utf8_normalize(self, text):
-        text = text.strip()
-        return text.encode("utf-8", errors="ignore").decode("utf-8")
-       
-    def load_docx(self, path):
-        try:
-            file = Document(path)
-            text = "\n".join(t.text for t in file.paragraphs)
-            return text       
-        except Exception:
+        if isinstance(text, str):
+            data = text.strip()
+            return data.encode("utf-8", errors="ignore").decode("utf-8")
+        elif isinstance(text, list):
+            return [self.utf8_normalize(item) for item in text]
+        elif isinstance(text, dict):
+            return {k: self.utf8_normalize(v) for k, v in text.items()}
+        else:
+            return text
+    def table2text(self, table):
+        rows = []
+        for r in table.rows:
+            cells = [c.text.strip().replace("\n", " ") for c in r.cells]
+            rows.append(cells)
+        if not rows:
             return ""
     
+        header = "| " + " | ".join(rows[0]) + " |"
+        sep    = "| " + " | ".join(["---"] * len(rows[0])) + " |"
+        body   = "\n".join("| " + " | ".join(row) + " |" for row in rows[1:])
+        return "\n".join([header, sep, body])
+    def image2bytes(self, b, out_dir, stem, idx, ext) :
+        os.makedirs(out_dir, exist_ok=True)
+        fname = f"{stem}_{idx}{ext}"
+        fpath = os.path.join(out_dir, fname)
+        with open(fpath, "wb") as f:
+            f.write(b)
+        return fpath
+    def load_docx(self, path,image_dir ):
+        try:
+            file = Document(path)
+            # import pdb
+            # pdb.set_trace()   
+        except Exception:
+            return {"paragraphs": [], "tables": [], "images": [], "meta": {}}
+        paragraphs, tables, images = [], [], []
+        for idx, para in enumerate(file.paragraphs):
+            txt = (para.text or "").strip()
+            if txt:
+                paragraphs.append({"para_id": idx, "text": txt})
+        for idx, tab in enumerate(file.tables, start=1):
+            table_txt = self.table2text(tab)
+            if table_txt.strip():
+                tables.append({"table_id": idx, "markdown": table_txt})
+        img_idx = 1
+        stem = os.path.splitext(os.path.basename(path))[0]
+        if image_dir:
+            out_dir = os.path.join(image_dir, stem)
+            os.makedirs(out_dir, exist_ok=True)
+
+            with zipfile.ZipFile(path, "r") as docx_zip:
+                media_files = [f for f in docx_zip.namelist() if f.startswith("word/media/")]
+                for i, filename in enumerate(media_files, start=1):
+                    # print(filename)
+                    ext = os.path.splitext(filename)[1]
+                    img_data = docx_zip.read(filename)
+                    img_path = os.path.join(out_dir, f"img_{i}{ext}")
+                    with open(img_path, "wb") as f:
+                        f.write(img_data)
+                    images.append({
+                        "image_id": i,
+                        "path": img_path,
+                        "caption": "",
+                        "source": "archive_extract"
+                    })
+
+            # 匹配 figure caption（可选）
+            para_texts = [p.text.strip() for p in file.paragraphs]
+            for img in images:
+                for txt in para_texts:
+                    if txt.lower().startswith(("figure", "fig.")) and str(img["image_id"]) in txt:
+                        img["caption"] = txt
+                        break
+
+        print(f"[INFO] Extracted {len(images)} images from {path}")
+
+        meta = {"zid":os.path.basename(path).split('.')[0],"ext": os.path.basename(path).split('.')[1], "filename": os.path.basename(path)}
+        return {"paragraphs": paragraphs, "tables": tables, "images": images, "meta": meta}
+
+        
     def load_pdf(self, path): 
         try:
             doc = fitz.open(path)
@@ -115,7 +186,7 @@ class DataLoader:
                     payload = result[0]
                     rec_texts  = payload.get("rec_texts", []) or []
                     rec_scores = payload.get("rec_scores", []) or []
-                    print(rec_scores)
+                    # print(rec_scores)
                     if self.min_conf > 0:
                         for t, sc in zip(rec_texts, rec_scores or [1.0] * len(rec_texts)):
                             if sc is None or sc >= self.min_conf:
@@ -139,15 +210,15 @@ class DataLoader:
         doc.close()
         return "\n".join(texts).strip()
 
-    def load_file(self, path):
+    def load_file(self, path, image_dir):
         file_form = os.path.splitext(path)[1].lower()
         if file_form == ".docx" or file_form == ".doc":
-            file_txt = self.load_docx(path)
+            file_txt = self.load_docx(path,image_dir)
             return self.utf8_normalize(file_txt)
         elif file_form == ".pdf":
             file_txt = self.load_pdf(path)
             use_ocr = self.file_scanned(file_txt)
-            print('\t[USE_OCR]',use_ocr)
+            # print('\t[USE_OCR]',use_ocr)
             if use_ocr:
                 file_txt = self.ocr_pdf(path)
             # print(file_txt)
@@ -173,17 +244,21 @@ class DataLoader:
 
 
 
-#用于测试
+
 # if __name__ == "__main__":
 #     from pprint import pprint
 
 #     loader = DataLoader()
 
-#     sample_path = "/Users/chenjo/Desktop/UNSW/2025/9900/AI_Moule/data/raw/a1_z12_tutor.pdf"
-
+#     sample_path = "/Users/chenjo/Desktop/UNSW/2025/9900/AI_Moule/data/raw/z111.docx"
+#     image_dir = "/Users/chenjo/Desktop/UNSW/2025/9900/AI_Moule/data/raw"
 #     if os.path.exists(sample_path):
-#         record = loader.metadata_extraction(sample_path)
-#         text_recd = loader.load_file(sample_path)
-#         print(record, text_recd)   # 打印出 assignment_id, student_id, prompt_id, response_path, response_text
+#         text_recd = loader.load_file(sample_path,image_dir)
+#         # for i in text_recd['paragraphs']:
+#         #     print(i['para_id'],'\n',i['text'])
+#         # for i in text_recd['tables']:
+#         #     print(i['markdown'])
+#         print(text_recd)
+ 
 #     else:
 #         print(f"[WARNing]")

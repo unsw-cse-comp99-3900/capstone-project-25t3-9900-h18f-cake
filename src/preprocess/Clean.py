@@ -1,7 +1,5 @@
 # from Loader import DataLoader
-import re, html, unicodedata, string
-import json
-import os
+import re, unicodedata, json, os
 '''
 used for cleaning
 return {'full_text': str, 'paragraphs': [{'para_id': i, 'text': str}]}
@@ -140,21 +138,21 @@ class TextCleaner:
         print(f"\t[OK] Saved cleaned full file to:  {path_full}.")
         print(f"\t[OK] Saved paragraphs file to:  {path_para}.")
 
-#用于测试
-if __name__ == "__main__":
-    from pprint import pprint
+# #用于测试
+# if __name__ == "__main__":
+#     from pprint import pprint
 
-    loader = DataLoader()
-    text_c = TextCleaner()
+#     loader = DataLoader()
+#     text_c = TextCleaner()
 
-    sample_path = "/Users/chenjo/Desktop/UNSW/2025/9900/AI_Moule/data/raw/11.pdf"
+#     sample_path = "/Users/chenjo/Desktop/UNSW/2025/9900/AI_Moule/data/raw/11.pdf"
 
-    if os.path.exists(sample_path):
-        record = loader.metadata_extraction(sample_path)
-        text_recd = loader.load_file(sample_path)
-        # print(text_recd)
-        bc = text_c.process(text_recd)
+#     if os.path.exists(sample_path):
+#         record = loader.metadata_extraction(sample_path)
+#         text_recd = loader.load_file(sample_path)
+#         # print(text_recd)
+#         bc = text_c.process(text_recd)
 
-        print(bc['paragraphs'])   # 打印出 assignment_id, student_id, prompt_id, response_path, response_text
-    else:
-        print(f"[WARNing]")
+#         print(bc['paragraphs'])   # 打印出 assignment_id, student_id, prompt_id, response_path, response_text
+#     else:
+#         print(f"[WARNing]")
