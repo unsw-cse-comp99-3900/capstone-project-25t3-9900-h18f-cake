@@ -58,14 +58,32 @@ def save_json_atomic(path: Path, data: Dict[str, Any]) -> None:
 # ---------- Schemas ----------
 class MarkingIn(BaseModel):
     zid: str
-    ai_marking: Optional[Dict[str, Any]] = None
-    tutor_marking: Optional[Dict[str, Any]] = None
+    ai_marking_detail: Optional[Dict[str, Any]] = None
+    tutor_marking_detail: Optional[Dict[str, Any]] = None
+    marked_by: Optional[str] = None
+    ai_total: Optional[float] = None
+    tutor_total: Optional[float] = None
+    difference: Optional[float] = None
+    tutor_feedback: Optional[str] = None
+    needs_review: Optional[bool] = None
+    review_status: Optional[str] = None
 
-class MarkingOut(BaseModel):
-    zid: str
-    ai_marking: Optional[Dict[str, Any]] = None
-    tutor_marking: Optional[Dict[str, Any]] = None
+
+class MarkingOut(MarkingIn):
+    # zid: str
+    # ai_marking_detail: Optional[Dict[str, Any]] = None
+    # tutor_marking_detail: Optional[Dict[str, Any]] = None
+    # marked_by: Optional[str] = None
+    # ai_marking_total: Optional[float] = None
+    # tutor_marking_total: Optional[float] = None
+    # difference: Optional[float] = None
+    # tutor_feedback: Optional[str] = None
+    # needs_review: Optional[bool] = None
+    # review_status: Optional[str] = None
     created_at: str
+
+
+
 
 # ---------- GET: through course_id toget  JSON  file content----------
 @router.get("/by_id/{course_id}")
@@ -157,12 +175,20 @@ def append_marking_result(
     data = load_json(json_path)
     data.setdefault("marking_results", [])
 
-    record = {
-        "zid": payload.zid.strip(),
-        "ai_marking": payload.ai_marking,
-        "tutor_marking": payload.tutor_marking,
+
+    ai_total = payload.ai_total 
+    tutor_total = payload.tutor_total
+    difference = None
+    if ai_total is not None and tutor_total is not None:
+        difference = round(tutor_total - ai_total, 2)
+
+    record = payload.dict()
+    record.update({
+        "ai_total": ai_total,
+        "tutor_total": tutor_total,
+        "difference": difference,
         "created_at": datetime.datetime.now().isoformat(),
-    }
+    })
 
     # upsert by zid
     updated = False
