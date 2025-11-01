@@ -2,36 +2,32 @@
 pandas==2.2.2
 numpy==1.26.4
 tqdm==4.66.4
+pyyaml==6.0.2
 
-# Machine Learning / Deep Learning
-scikit-learn==1.5.1
+# ML / Embeddings
 torch>=2.2.0
+scikit-learn==1.5.1
 sentence-transformers==2.7.0
 faiss-cpu==1.8.0
+keybert>=0.8.4
 
-# Document Processing
-pypdf==4.3.1
-pymupdf==1.21.0
+# Document / OCR
 python-docx==1.1.2
-pytesseract==0.3.10
 Pillow==10.3.0
-pdfminer.six==20240706   
-paddleocr>=3.0.0   
+pymupdf==1.24.9
+pypdf==4.3.1
+pdfminer.six==20240706
+paddleocr>=3.0.0
 paddlepaddle>=3.0.0,<4.0
 opencv-python-headless==4.10.0.84
 pytesseract==0.3.10
 
-# Utilities
-pyyaml==6.0.2
-matplotlib==3.9.2
-# stem analysis
-nltk==3.9.1 #punkt, stopwords
+# NLP
+nltk==3.9.1
+regex>=2023.10.3
 
-#rubric generation
-keybert>=0.8.4       # 关键词抽取
+# LLM
 openai>=1.40.0
 
-#rubric retriever
-faiss-cpu>=1.7.4
-
-        
+# Visualization (optional)
+matplotlib==3.9.2
