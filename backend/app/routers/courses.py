@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
+from pathlib import Path
 from sqlalchemy import and_
 from ..db import get_db
 from .. import models, schemas
 from ..deps import get_current_user, UserClaims
+import datetime
+import json
 
 router = APIRouter(prefix="/v1/courses", tags=["courses"])
 
@@ -34,11 +37,35 @@ def create_course(
     )
     if exists:
         raise HTTPException(status_code=400, detail="This course code already exists in the same term")
+    
+    year, spec_term = term.split("Term")
+    year = year.strip()
+    spec_term = spec_term.strip()
+    spec_term = f"Term{spec_term}"
+    Json_name = f"{year}_{spec_term}"
 
     c = models.Course(code=code, name=name, term=term, owner_id=int(me.sub))
     db.add(c)
     db.commit()
     db.refresh(c)
+
+    #create folder and json file for this new course
+    base_folder = Path("./marking_result")
+    folder = base_folder / Json_name
+    folder.mkdir(parents=True, exist_ok=True)
+
+    file_path = folder / f"{code}.json"
+    if not file_path.exists():
+        init_data = {
+            "course": code,
+            "name": name,
+            "term": term,
+            "created_at": datetime.datetime.now().isoformat(),
+            "marking_results": []
+        }
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(init_data, f, indent=4, ensure_ascii=False)
+    # print(f" Created marking result file: {file_path.resolve()}")
     return c
 
 
@@ -62,10 +89,25 @@ def delete_course(
     me: UserClaims = Depends(get_current_user),
 ):
     c = db.get(models.Course, course_id)
+
     if not c:
         raise HTTPException(status_code=404, detail="Course not found")
     if c.owner_id != int(me.sub):
         raise HTTPException(status_code=403, detail="Forbidden")
+
+    #get the info about course code and course term
+    year, spec_term = c.term.split("Term")
+    spec_term = f"Term{spec_term}"
+
+    year = year.strip()
+    spec_term = spec_term.strip()
+    
+    folder = Path("marking_result") / f"{year}_{spec_term}"
+    file_path = folder / f"{c.code}.json"
+
+    if file_path.exists():
+        file_path.unlink()
+        print(f"Deleted {file_path.resolve()}")
 
     db.delete(c)
     db.commit()
