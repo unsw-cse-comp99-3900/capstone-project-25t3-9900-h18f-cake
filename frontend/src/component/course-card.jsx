@@ -6,9 +6,9 @@ export default function CourseCard({
     code,
     title,
     showDelete,
-    showManage,             // ← NEW prop
+    showManage,
     onDelete,
-    onManage,               // ← NEW callback
+    onManage,
     onOpen,
     height = { xs: 116, sm: 128, md: 140 },
 }) {
@@ -40,9 +40,9 @@ export default function CourseCard({
                 border: (showDelete || showManage) ? "2px solid #475569" : "1px solid transparent",
                 "&:hover": !(showDelete || showManage)
                     ? {
-                        backgroundColor: "grey.100",      // <- subtle MUI-style hover bg
-                        transform: "translateY(-2px)",     // <- slight lift
-                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)", // <- softer than before
+                        backgroundColor: "grey.100",
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.26)",
                     }
                     : undefined,
                 "&:focus-visible": !(showDelete || showManage)
