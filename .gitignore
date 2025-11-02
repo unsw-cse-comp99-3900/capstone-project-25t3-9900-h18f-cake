@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+backend/marking_result/
+__pycache__/
