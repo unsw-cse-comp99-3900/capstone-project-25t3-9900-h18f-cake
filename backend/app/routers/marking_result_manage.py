@@ -64,6 +64,8 @@ class MarkingIn(BaseModel):
     ai_total: Optional[float] = None
     tutor_total: Optional[float] = None
     difference: Optional[float] = None
+    third_person_review_mark: Optional[float] = None
+    ai_feedback: Optional[str] = None
     tutor_feedback: Optional[str] = None
     needs_review: Optional[bool] = None
     review_status: Optional[str] = None
@@ -165,7 +167,7 @@ def append_marking_result(
     #     raise HTTPException(status_code=403, detail="Forbidden")
     
 
-    print(c.code, c.term)
+    # print(c.code, c.term)
 
     try:
         json_path = course_json_path_by_course(c)
@@ -183,6 +185,13 @@ def append_marking_result(
         difference = round(tutor_total - ai_total, 2)
 
     record = payload.dict()
+
+
+    if difference is not None and difference >= 5:
+        record["needs_review"] = True
+    else:
+        record["needs_review"] = False
+        
     record.update({
         "ai_total": ai_total,
         "tutor_total": tutor_total,
