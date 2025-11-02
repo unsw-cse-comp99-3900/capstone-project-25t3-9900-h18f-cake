@@ -61,6 +61,7 @@ def create_course(
             "name": name,
             "term": term,
             "created_at": datetime.datetime.now().isoformat(),
+            "ai_marking_finished": False,
             "marking_results": []
         }
         with open(file_path, "w", encoding="utf-8") as f:
