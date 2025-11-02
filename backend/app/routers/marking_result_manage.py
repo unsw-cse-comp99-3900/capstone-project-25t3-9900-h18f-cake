@@ -92,13 +92,13 @@ class MarkingOut(MarkingIn):
 def get_course_marking_result_by_id(
     course_id: int,
     db: Session = Depends(get_db),
-    me: UserClaims = Depends(get_current_user),
+    # me: UserClaims = Depends(get_current_user),
 ):
     c = db.get(models.Course, course_id)
     if not c:
         raise HTTPException(status_code=404, detail="Course not found")
-    if c.owner_id != int(me.sub):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    # if c.owner_id != int(me.sub):
+    #     raise HTTPException(status_code=403, detail="Forbidden")
 
     try:
         json_path = course_json_path_by_course(c)
