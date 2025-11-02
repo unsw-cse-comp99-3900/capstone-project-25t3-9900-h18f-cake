@@ -44,6 +44,7 @@ def load_json(path: Path) -> Dict[str, Any]:
             "name": "",
             "term": "",
             "created_at": datetime.datetime.now().isoformat(),
+            "ai_marking_finished": False,
             "marking_results": []
         }
     with open(path, "r", encoding="utf-8") as f:
