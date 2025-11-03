@@ -137,12 +137,28 @@ export default function CoursesPage() {
         );
     };
 
-    const goView = () => {
+    const goView = async () => {
         const c = selectedCourse;
+        if (!c?._id) {
+            toast.error("Missing course identifier.");
+            return;
+        }
+
+        try {
+            const status = await API.markingResults.status(c._id);
+            if (!status?.ai_completed) {
+                toast.info("AI results not finished yet. Please wait.");
+                return;
+            }
+        } catch (err) {
+            toast.error(err?.message || "Failed to check AI results status.");
+            return;
+        }
+
         const term = c.term || c.year_term || "";
         closeActions();
         navigate(
-            `/airesult?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(term)}`,
+            `/airesult?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(term)}&courseId=${encodeURIComponent(c._id)}`,
             { replace: false }
         );
     };
