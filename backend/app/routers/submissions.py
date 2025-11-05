@@ -1,19 +1,16 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-import os, shutil, re
+import shutil, re
 from datetime import datetime
 from pathlib import Path
 from ..db import get_db
-from ..models import Submission, SubmissionFile
+from ..models import Submission, SubmissionFile, ActorRole, PartKind 
 from ..schemas import SubmissionDetailOut
 from ..deps import get_current_user
 from ..utils.submission_status import compute_status
 from ..utils.file_utils import save_meta_json
-from ..utils.path_utils import assignment_dir, student_dir  
-from ..config import settings
-from ..models import Submission, SubmissionFile, ActorRole, PartKind 
-from ..utils.path_utils import assignment_dir, student_dir,step_bucket
+from ..utils.path_utils import assignment_dir, student_dir
 
 router = APIRouter(prefix="/v1/submissions", tags=["submissions"])
 
@@ -31,6 +28,57 @@ def _role_kind_from_step(step_index: int) -> tuple[ActorRole, PartKind]:
     if step_index == 6: return ActorRole.TUTOR, PartKind.SCORE
     return ActorRole.COORDINATOR, PartKind.ASSIGNMENT
 
+# def _save_step_files(
+#     db: Session,
+#     sub: Submission,
+#     course: str,
+#     term: str,
+#     assignment_name: str,
+#     assignment_id: int | None,
+#     step_index: int,
+#     files: List[UploadFile],
+#     user_id: int,
+#     student_id: Optional[str] = None,
+# ) -> list[Path]:
+
+#     base_assignment: Path = assignment_dir(course, term, assignment_name, assignment_id or 0)
+#     sid = (student_id or getattr(sub, "student_id", None) or f"unknown-{sub.id}").lower()
+#     bucket = step_bucket(step_index)
+#     step_dir = student_dir(base_assignment, sid) / bucket
+#     step_dir.mkdir(parents=True, exist_ok=True)
+#     role, kind = _role_kind_from_step(step_index)
+
+#     saved_paths: list[Path] = []
+#     for uf in files or []:
+#         suffix = Path(uf.filename).suffix or ".dat"
+#         fname = f"{sid}{suffix}"
+#         dest = step_dir / fname
+#         for old in step_dir.glob(f"{sid}.*"):
+#             try:
+#                 old.unlink()
+#             except Exception:
+#                 pass
+
+#         with open(dest, "wb") as f:
+#             shutil.copyfileobj(uf.file, f)
+
+#         db.add(SubmissionFile(
+#             submission_id=sub.id,
+#             step_index=step_index,
+#             actor_role=role,
+#             part_kind=kind,
+#             filename=fname,
+#             path=str(dest),
+#             mime=uf.content_type,
+#             size=None,
+#             uploaded_by=user_id,
+#             uploaded_at=datetime.utcnow(),
+#         ))
+#         saved_paths.append(dest)
+
+#     return saved_paths
+
+
 def _save_step_files(
     db: Session,
     sub: Submission,
@@ -43,20 +91,41 @@ def _save_step_files(
     user_id: int,
     student_id: Optional[str] = None,
 ) -> list[Path]:
+    """
+    Save uploaded files grouped by marker role.
+
+    File layout under uploads/.../submissions:
+      - Student_assignment_with_coordinator_mark/<zid>/<zid>_{assignment|mark}.*
+      - Student_assignment_with_Tutor_mark/<zid>/<zid>_{assignment|mark}.*
+    """
 
     base_assignment: Path = assignment_dir(course, term, assignment_name, assignment_id or 0)
     sid = (student_id or getattr(sub, "student_id", None) or f"unknown-{sub.id}").lower()
-    bucket = step_bucket(step_index)
-    step_dir = student_dir(base_assignment, sid) / bucket
-    step_dir.mkdir(parents=True, exist_ok=True)
     role, kind = _role_kind_from_step(step_index)
+
+    folder_by_role = {
+        ActorRole.COORDINATOR: "Student_assignment_with_coordinator_mark",
+        ActorRole.TUTOR: "Student_assignment_with_Tutor_mark",
+    }
+    mark_folder = folder_by_role.get(role, "Student_assignment_with_coordinator_mark")
+
+    label_by_kind = {
+        PartKind.ASSIGNMENT: "assignment",
+        PartKind.SCORE: "mark",
+    }
+    label = label_by_kind.get(kind, f"step{step_index}")
+
+    step_dir = base_assignment / "submissions" / mark_folder / sid
+    step_dir.mkdir(parents=True, exist_ok=True)
 
     saved_paths: list[Path] = []
     for uf in files or []:
         suffix = Path(uf.filename).suffix or ".dat"
-        fname = f"{sid}{suffix}"
+        fname = f"{sid}_{label}{suffix}"
         dest = step_dir / fname
-        for old in step_dir.glob(f"{sid}.*"):
+
+        # cleanup old versions of same step
+        for old in step_dir.glob(f"{sid}_{label}.*"):
             try:
                 old.unlink()
             except Exception:
@@ -80,6 +149,8 @@ def _save_step_files(
         saved_paths.append(dest)
 
     return saved_paths
+
+
 
 
 # ---------- Create single submission ----------
@@ -245,18 +316,20 @@ async def bulk_upload_student_assignments(
         db.add(sub)
         db.flush()
 
-        # path：uploads/{course-term}/{assignmentSlug}-{assignmentId}/submissions/{studentId}/{studentId}.<ext>
+        # path：uploads/{course-term}/{assignmentSlug}-{assignmentId}/submissions/Student_assignment_with_coordinator_mark/{studentId}/{studentId}_assignment.<ext>
         base_assignment: Path = assignment_dir(course, term or "", assignmentName, assignmentId)
-        student_folder = student_dir(base_assignment, sid)
-        student_folder.mkdir(parents=True, exist_ok=True)
+        storage_dir = base_assignment / "submissions" / "Student_assignment_with_coordinator_mark" / sid
+        storage_dir.mkdir(parents=True, exist_ok=True)
 
         role, kind = ActorRole.COORDINATOR, PartKind.ASSIGNMENT
-        dest_dir = student_folder / step_bucket(3)
-
-        dest_dir.mkdir(parents=True, exist_ok=True)
 
         suffix = Path(f.filename).suffix or ".pdf"
-        dest = dest_dir / (sid + suffix)
+        dest = storage_dir / f"{sid}_assignment{suffix}"
+        for old in storage_dir.glob(f"{sid}_assignment.*"):
+            try:
+                old.unlink()
+            except Exception:
+                pass
         with open(dest, "wb") as out:
             shutil.copyfileobj(f.file, out)
 
@@ -273,6 +346,7 @@ async def bulk_upload_student_assignments(
             uploaded_at=datetime.utcnow(),
         ))
 
+        meta_folder = student_dir(base_assignment, sid)
         sub.status = compute_status(sub)
 
         meta = {
@@ -286,7 +360,7 @@ async def bulk_upload_student_assignments(
             "status": sub.status.value if hasattr(sub.status, "value") else sub.status,
             "uploaded_by": user.sub,
         }
-        meta_path = save_meta_json(student_folder, meta)
+        meta_path = save_meta_json(meta_folder, meta)
         sub.meta_json = str(meta_path)
 
         created.append(sub)
