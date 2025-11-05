@@ -1,0 +1,10 @@
+# backend
+dev.db
+app/**/__pycache__/
+
+# build caches & local data
+__pycache__/
+*.pyc
+/dev.db
+/uploads/
+/marking_result/
