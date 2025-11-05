@@ -1,21 +1,12 @@
 import { useState } from "react";
-// import { useAuth } from "../context/auth-context";
-
-import {
-    Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, TextField, MenuItem, Typography,
-    // Box, Chip
-} from "@mui/material";
+import {Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem, Typography} from "@mui/material";
 
 export default function CourseAdd({ open, onClose, onAdd }) {
-
-    // const { user } = useAuth();
     const [code, setCode] = useState("");
     const [title, setTitle] = useState("");
     const [year, setYear] = useState("");
     const [term, setTerm] = useState("");
     const [errors, setErrors] = useState({});
-    // const [menuOpen, setMenuOpen] = useState(false);
 
     const resetForm = () => {
         setCode("");
@@ -44,8 +35,7 @@ export default function CourseAdd({ open, onClose, onAdd }) {
         const formattedTerm = term.trim().replace(/^T/i, "Term ");
         const year_term = `${year.trim()} ${formattedTerm}`;
         const newCourse = { year_term, code: code.trim(), title: title.trim() };
-        // const who = user?.email || user?.name || "Unknown user";
-        
+
         onAdd?.(newCourse);
         resetForm();
     };

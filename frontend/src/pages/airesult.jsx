@@ -12,6 +12,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
+import API from "../api";
 
 import DashboardStudent from "../component/dashboard-1-main";
 import DashboardTutorScatter from "../component/dashboard-2-tutor-scatter";
@@ -19,91 +20,6 @@ import ExitConfirmPopup from "../component/exit-confirm";
 import Sidebar, { SIDEBAR_WIDTH } from "../component/sidebar";
 
 const TOPBAR_HEIGHT = 72;
-
-// Demo data - 添加 Review 相关字段
-const ALL_ROWS = [
-    { 
-        studentID: 1, 
-        studentName: "Student A",
-        markBy: "Peter Zhang", 
-        tutorMark: 78, 
-        aiMark: 85, 
-        difference: 7, 
-        feedback: "Good improvement but needs more detailed analysis", 
-        assignment: "Assignment 1",
-        needsReview: true,
-        reviewStatus: "pending",
-        reviewComments: ""
-    },
-    { 
-        studentID: 2, 
-        studentName: "Student B",
-        markBy: "Jessie Chen", 
-        tutorMark: 95, 
-        aiMark: 92, 
-        difference: -3, 
-        feedback: "Long feedback Long feedback Long feedback...", 
-        assignment: "Assignment 2",
-        needsReview: false,
-        reviewStatus: "pending",
-        reviewComments: ""
-    },
-    { 
-        studentID: 3, 
-        studentName: "Student C",
-        markBy: "Tutor 4", 
-        tutorMark: 82, 
-        aiMark: 76, 
-        difference: -6, 
-        feedback: "Basic requirements met but lacks depth", 
-        assignment: "Assignment 1",
-        needsReview: true,
-        reviewStatus: "pending",
-        reviewComments: ""
-    },
-    { 
-        studentID: 4, 
-        studentName: "Student D",
-        markBy: "Tutor 4", 
-        tutorMark: 82, 
-        aiMark: 76, 
-        difference: -6, 
-        feedback: "", 
-        assignment: "Assignment 1",
-        needsReview: true,
-        reviewStatus: "pending",
-        reviewComments: ""
-    },
-    { 
-        studentID: 9, 
-        studentName: "Student I",
-        markBy: "Tutor 3", 
-        tutorMark: 85, 
-        aiMark: 85, 
-        difference: 0, 
-        feedback: "", 
-        assignment: "Assignment 3",
-        needsReview: false,
-        reviewStatus: "pending",
-        reviewComments: ""
-    },
-    { 
-        studentID: 10, 
-        studentName: "Student J",
-        markBy: "Tutor 3", 
-        tutorMark: 85, 
-        aiMark: 88, 
-        difference: 3, 
-        feedback: "", 
-        assignment: "Assignment 3",
-        needsReview: false,
-        reviewStatus: "pending",
-        reviewComments: ""
-    },
-];
-
-const ASSIGNMENTS = ["Assignment 1", "Assignment 2", "Assignment 3"];
-const TUTORS = ["Peter Zhang", "Jessie Chen", "Tutor 3", "Tutor 4"];
 
 // Review 组件
 function ReviewDashboard({ rows }) {
@@ -238,14 +154,14 @@ function ReviewDashboard({ rows }) {
 
             {/* Current Item for Review */}
             {currentItem && (
-                <Card sx={{ mb: 2, flexGrow: 1 }}>
+                <Card sx={{ mb: 2, flexGrow: 1 ,overflowY: "auto"}}>
                     <CardContent sx={{ p: 3 }}>
                         <Stack spacing={3}>
                             {/* Header */}
                             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                 <Box>
                                     <Typography variant="h5" gutterBottom color="primary">
-                                        {currentItem.studentName} (z{currentItem.studentID})
+                                        {currentItem.studentName} ({currentItem.zid || `z${currentItem.studentID}`})
                                     </Typography>
                                     <Typography variant="h6" color="text.secondary">
                                         {currentItem.assignment} • Marked by: {currentItem.markBy}
@@ -345,13 +261,13 @@ function ReviewDashboard({ rows }) {
                         <Typography variant="h6" gutterBottom>Review Summary</Typography>
                         <Stack spacing={2}>
                             {Object.entries(decisions).map(([studentID, decisionData]) => {
-                                const item = rows.find(r => r.studentID === parseInt(studentID));
+                                const item = rows.find((r) => String(r.studentID) === studentID);
                                 return item ? (
                                     <Paper key={studentID} variant="outlined" sx={{ p: 2 }}>
                                         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                                             <Box>
                                                 <Typography variant="subtitle1" fontWeight="bold">
-                                                    z{item.studentID} - {item.assignment}
+                                                    {item.zid || `z${item.studentID}`} - {item.assignment}
                                                 </Typography>
                                                 <Typography variant="body2" color="text.secondary">
                                                     {item.studentName} • {item.markBy}
@@ -384,14 +300,95 @@ function ReviewDashboard({ rows }) {
 
 export default function Airesult() {
     const [searchParams] = useSearchParams();
+    const courseId = searchParams.get("courseId");
     const [course, setCourse] = useState("");
     const [term, setTerm] = useState("");
     const [dashboardOpen, setDashboardOpen] = useState("dashboard"); // "dashboard" or "review"
+    const [rows, setRows] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [fetchError, setFetchError] = useState("");
 
     useEffect(() => {
         setCourse(searchParams.get("course") || "");
         setTerm(searchParams.get("term") || "");
     }, [searchParams]);
+
+    useEffect(() => {
+        if (!courseId) {
+            setFetchError("缺少课程ID，请从课程列表进入查看。");
+            setRows([]);
+            return;
+        }
+
+        let cancelled = false;
+        setLoading(true);
+        setFetchError("");
+        setRows([]);
+
+        API.markingResults
+            .byCourseId(courseId)
+            .then((data) => {
+                if (cancelled) return;
+                const items = Array.isArray(data?.marking_results) ? data.marking_results : [];
+                const mapped = items.map((item, index) => {
+                    const aiRaw = item.ai_total ?? item.aiMark ?? null;
+                    const tutorRaw = item.tutor_total ?? item.tutorMark ?? null;
+                    const ai = aiRaw !== null && aiRaw !== undefined ? Number(aiRaw) : null;
+                    const tutor = tutorRaw !== null && tutorRaw !== undefined ? Number(tutorRaw) : null;
+                    const hasAi = ai !== null && !Number.isNaN(ai);
+                    const hasTutor = tutor !== null && !Number.isNaN(tutor);
+
+                    let diff = item.difference;
+                    if (diff !== undefined && diff !== null) {
+                        const diffNum = Number(diff);
+                        diff = Number.isNaN(diffNum) ? 0 : Number(diffNum.toFixed(2));
+                    } else if (hasAi && hasTutor) {
+                        diff = Number((ai - tutor).toFixed(2));
+                    } else {
+                        diff = 0;
+                    }
+
+                    const needsReview =
+                        item.needs_review !== undefined && item.needs_review !== null
+                            ? item.needs_review
+                            : Math.abs(diff ?? 0) >= 5;
+
+                    const zid = item.zid ? String(item.zid) : `z${index + 1}`;
+                    const studentIdValue = zid.replace(/^z/i, "") || zid;
+
+                    return {
+                        studentID: studentIdValue,
+                        zid,
+                        studentName: item.student_name || item.studentName || zid,
+                        markBy: item.marked_by || item.markBy || "Unknown",
+                        tutorMark: hasTutor ? Number(tutor.toFixed(2)) : null,
+                        aiMark: hasAi ? Number(ai.toFixed(2)) : null,
+                        difference: diff,
+                        feedback: item.ai_feedback || item.feedback || "",
+                        assignment: item.assignment || "Unassigned",
+                        needsReview,
+                        reviewStatus: item.review_status || "pending",
+                        reviewComments: item.review_comments || "",
+                    };
+                });
+
+                setRows(mapped);
+                setCourse((prev) => prev || data?.course || "");
+                setTerm((prev) => prev || data?.term || "");
+            })
+            .catch((err) => {
+                if (cancelled) return;
+                setFetchError(err?.message || "加载AI结果失败，请稍后再试。");
+                setRows([]);
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [courseId]);
 
     const navigate = useNavigate();
     const { logout } = useAuth();
@@ -400,14 +397,42 @@ export default function Airesult() {
     const [selectedAssignment, setSelectedAssignment] = useState("all");
     const [selectedTutor, setSelectedTutor] = useState("all");
 
+    const availableAssignments = useMemo(() => {
+        const uniq = new Set();
+        rows.forEach((r) => {
+            if (r.assignment) uniq.add(r.assignment);
+        });
+        return Array.from(uniq);
+    }, [rows]);
+
+    const availableTutors = useMemo(() => {
+        const uniq = new Set();
+        rows.forEach((r) => {
+            if (r.markBy) uniq.add(r.markBy);
+        });
+        return Array.from(uniq);
+    }, [rows]);
+
+    useEffect(() => {
+        if (selectedAssignment !== "all" && !availableAssignments.includes(selectedAssignment)) {
+            setSelectedAssignment("all");
+        }
+    }, [availableAssignments, selectedAssignment]);
+
+    useEffect(() => {
+        if (selectedTutor !== "all" && !availableTutors.includes(selectedTutor)) {
+            setSelectedTutor("all");
+        }
+    }, [availableTutors, selectedTutor]);
+
     const filteredRows = useMemo(
         () =>
-            ALL_ROWS.filter(
+            rows.filter(
                 (r) =>
                     (selectedAssignment === "all" || r.assignment === selectedAssignment) &&
                     (selectedTutor === "all" || r.markBy === selectedTutor)
             ),
-        [selectedAssignment, selectedTutor]
+        [rows, selectedAssignment, selectedTutor]
     );
 
     return (
@@ -475,7 +500,10 @@ export default function Airesult() {
                         pt: 4,
                         px: 4,
                         maxWidth: "90vw",
-                        maxHeight: "90vh",
+                        // mx: "auto",
+                        overflowY: "auto", // ✅ 关键：内容超出时显示垂直滚动条
+                        scrollBehavior: "smooth",               
+                        // maxHeight: "90vh",
                         mx: "auto",
                     }}
                 >
@@ -485,6 +513,22 @@ export default function Airesult() {
                         logout={logout}
                         navigate={navigate}
                     />
+
+                    {loading && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            正在加载AI评分结果...
+                        </Alert>
+                    )}
+                    {fetchError && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {fetchError}
+                        </Alert>
+                    )}
+                    {!loading && !fetchError && rows.length === 0 && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            暂无评分记录。
+                        </Alert>
+                    )}
 
                     {dashboardOpen === "dashboard" ? (
                         <>
@@ -510,7 +554,7 @@ export default function Airesult() {
                                             onChange={(e) => setSelectedAssignment(e.target.value)}
                                         >
                                             <MenuItem value="all">All assignments</MenuItem>
-                                            {ASSIGNMENTS.map((a) => (
+                                            {availableAssignments.map((a) => (
                                                 <MenuItem key={a} value={a}>{a}</MenuItem>
                                             ))}
                                         </Select>
@@ -525,7 +569,7 @@ export default function Airesult() {
                                             onChange={(e) => setSelectedTutor(e.target.value)}
                                         >
                                             <MenuItem value="all">All tutors</MenuItem>
-                                            {TUTORS.map((t) => (
+                                            {availableTutors.map((t) => (
                                                 <MenuItem key={t} value={t}>{t}</MenuItem>
                                             ))}
                                         </Select>
@@ -551,11 +595,11 @@ export default function Airesult() {
                             {/* Content area */}
                             <Box sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}>
                                 {variant === "studentView" ? (
-                                    <Box sx={{ width: "100%", height: "100%" }}>
+                                    <Box sx={{ width: "100%", height: "100%" ,display: "flex", flexDirection: "column", overflowY: "auto"}}>
                                         <DashboardStudent variant="studentView" rows={filteredRows} />
                                     </Box>
                                 ) : (
-                                    <Box sx={{ width: "100%", height: "80%" }}>
+                                    <Box sx={{ width: "100%", height: "80%" ,display: "flex", flexDirection: "column", overflowY: "auto"}}>
                                         <DashboardTutorScatter variant="tutorView" rows={filteredRows} />
                                     </Box>
                                 )}
