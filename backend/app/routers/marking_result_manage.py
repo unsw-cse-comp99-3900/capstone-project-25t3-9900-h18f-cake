@@ -5,6 +5,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Any, Optional, Dict, List, Tuple
 import json, datetime, re
+from fastapi import UploadFile, File
 
 from app.db import get_db
 from app import models
@@ -73,16 +74,6 @@ class MarkingIn(BaseModel):
 
 
 class MarkingOut(MarkingIn):
-    # zid: str
-    # ai_marking_detail: Optional[Dict[str, Any]] = None
-    # tutor_marking_detail: Optional[Dict[str, Any]] = None
-    # marked_by: Optional[str] = None
-    # ai_marking_total: Optional[float] = None
-    # tutor_marking_total: Optional[float] = None
-    # difference: Optional[float] = None
-    # tutor_feedback: Optional[str] = None
-    # needs_review: Optional[bool] = None
-    # review_status: Optional[str] = None
     created_at: str
 
 
@@ -159,7 +150,6 @@ def append_marking_result(
     course_id: int,
     payload: MarkingIn,
     db: Session = Depends(get_db),
-    # me: UserClaims = Depends(get_current_user),
 ):
     c = db.get(models.Course, course_id)
     if not c:
@@ -212,3 +202,9 @@ def append_marking_result(
 
     save_json_atomic(json_path, data)
     return MarkingOut(**record)
+
+
+
+
+
+# Update AI marking for the course
