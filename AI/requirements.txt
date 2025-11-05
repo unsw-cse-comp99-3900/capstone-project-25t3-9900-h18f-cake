@@ -1,0 +1,33 @@
+# Core
+pandas==2.2.2
+numpy==1.26.4
+tqdm==4.66.4
+pyyaml==6.0.2
+
+# ML / Embeddings
+torch>=2.2.0
+scikit-learn==1.5.1
+sentence-transformers==2.7.0
+faiss-cpu==1.8.0
+keybert>=0.8.4
+
+# Document / OCR
+python-docx==1.1.2
+Pillow==10.3.0
+pymupdf==1.24.9
+pypdf==4.3.1
+pdfminer.six==20240706
+paddleocr>=3.0.0
+paddlepaddle>=3.0.0,<4.0
+opencv-python-headless==4.10.0.84
+pytesseract==0.3.10
+
+# NLP
+nltk==3.9.1
+regex>=2023.10.3
+
+# LLM
+openai>=1.40.0
+
+# Visualization (optional)
+matplotlib==3.9.2
