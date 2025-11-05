@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import shutil, re
@@ -12,6 +12,7 @@ from ..utils.submission_status import compute_status
 from ..utils.file_utils import save_meta_json
 from ..utils.path_utils import assignment_dir, student_dir
 from ..services.marking_sync import sync_tutor_mark_from_file
+from ..services.ai_runner import run_ai_marking_pipeline
 
 router = APIRouter(prefix="/v1/submissions", tags=["submissions"])
 
@@ -193,6 +194,7 @@ def _save_step_files(
 # ---------- Create single submission ----------
 @router.post("", response_model=SubmissionDetailOut)
 async def create_submission(
+    background: BackgroundTasks,
     assignmentName: str = Form(...),
     course: str = Form(...),
     term: str = Form(""),
@@ -221,6 +223,7 @@ async def create_submission(
     db.flush()
 
     tutor_mark_paths: list[Path] = []
+    ai_assignment_paths: list[Path] = []
 
     for idx, files in [(1, step1), (2, step2), (3, step3),
                        (4, step4), (5, step5), (6, step6)]:
@@ -237,6 +240,8 @@ async def create_submission(
                 user_id= int(user.sub),
                 student_id=studentId,
             )
+            if idx == 5:
+                ai_assignment_paths.extend(saved)
             if idx == 6:
                 tutor_mark_paths.extend(saved)
 
@@ -247,6 +252,9 @@ async def create_submission(
             sync_tutor_mark_from_file(db, sub, mark_path)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Failed to sync tutor mark: {exc}")
+
+    if assignmentId and ai_assignment_paths:
+        background.add_task(run_ai_marking_pipeline, assignmentId)
 
     base_assignment: Path = assignment_dir(course, term or "", assignmentName, assignmentId or 0)
     sid_for_meta = (studentId or sub.student_id or f"unknown-{sub.id}").lower()
@@ -275,6 +283,7 @@ async def create_submission(
 # ---------- Append extra files ----------
 @router.put("/{submission_id}/files", response_model=SubmissionDetailOut)
 async def append_files(
+    background: BackgroundTasks,
     submission_id: int,
     stepIndex: int = Form(..., ge=1, le=6),
     files: List[UploadFile] = File(...),
@@ -298,6 +307,8 @@ async def append_files(
         user_id=int(user.sub),
         student_id=(studentId or sub.student_id),
     )
+    if stepIndex == 5 and sub.assignment_id:
+        background.add_task(run_ai_marking_pipeline, sub.assignment_id)
     if stepIndex == 6:
         for mark_path in saved_paths:
             try:

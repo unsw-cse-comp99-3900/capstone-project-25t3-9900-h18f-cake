@@ -5,6 +5,7 @@ from typing import Optional, Any
 from openai import OpenAI
 
 
+
 class LLMClient:
     def __init__(self, model: str = "gpt-4o-mini", api_key_env: str = "OPENAI_API_KEY",
         save_log: bool = True, log_dir: Optional[str] = None):
