@@ -4,6 +4,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Any, Optional, Dict, List, Tuple
 import json, datetime, re
+from fastapi import UploadFile, File
 
 from app.db import get_db
 from app import models
@@ -298,3 +299,10 @@ def append_marking_result(
 
     save_json_atomic(json_path, data)
     return MarkingOut(**record)
+
+
+
+
+
+
+# Update AI marking for the course
