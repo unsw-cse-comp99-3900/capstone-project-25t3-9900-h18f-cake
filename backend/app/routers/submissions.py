@@ -11,6 +11,7 @@ from ..deps import get_current_user
 from ..utils.submission_status import compute_status
 from ..utils.file_utils import save_meta_json
 from ..utils.path_utils import assignment_dir, student_dir
+from ..services.marking_sync import sync_tutor_mark_from_file
 
 router = APIRouter(prefix="/v1/submissions", tags=["submissions"])
 
@@ -148,6 +149,42 @@ def _save_step_files(
         ))
         saved_paths.append(dest)
 
+
+
+
+
+
+
+    # # update marked file's question adn tutor mark into course marking result json file
+    # if step_index == 6 and role.name == "TUTOR" and kind.name == "SCORE":
+    #     try:
+    #         extractor = TutorMarkExtractor()
+    #         extracted = extractor.extract_marks(str(dest))
+
+    #         # 构造 payload 与 MarkingIn 对齐
+    #         payload = {
+    #             "zid": extracted["zid"],
+    #             "tutor_marking_detail": extracted["tutor_marking_detail"],
+    #             "tutor_total": extracted["tutor_total"],
+    #             "marked_by": "tutor",
+    #             "needs_review": False,
+    #             "review_status": "unchecked"
+    #         }
+
+    #         # 发送 POST 请求到本地 API
+    #         url = f"http://127.0.0.1:8000/v1/marking_result/{sub.assignment_id}/append"
+    #         res = requests.post(url, json=payload)
+    #         if res.status_code == 200:
+    #             print(f"[INFO] Tutor marks for {extracted['zid']} updated via /append")
+    #         else:
+    #             print(f"[WARN] Failed to update via API: {res.status_code}, {res.text}")
+
+    #     except Exception as e:
+    #         print(f"[WARN] Tutor mark extraction failed: {e}")
+
+
+
+
     return saved_paths
 
 
@@ -183,10 +220,12 @@ async def create_submission(
     db.add(sub)
     db.flush()
 
+    tutor_mark_paths: list[Path] = []
+
     for idx, files in [(1, step1), (2, step2), (3, step3),
                        (4, step4), (5, step5), (6, step6)]:
         if files:
-            _save_step_files(
+            saved = _save_step_files(
                 db=db,
                 sub=sub,
                 course=course,
@@ -198,8 +237,16 @@ async def create_submission(
                 user_id= int(user.sub),
                 student_id=studentId,
             )
+            if idx == 6:
+                tutor_mark_paths.extend(saved)
 
     sub.status = compute_status(sub)
+
+    for mark_path in tutor_mark_paths:
+        try:
+            sync_tutor_mark_from_file(db, sub, mark_path)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to sync tutor mark: {exc}")
 
     base_assignment: Path = assignment_dir(course, term or "", assignmentName, assignmentId or 0)
     sid_for_meta = (studentId or sub.student_id or f"unknown-{sub.id}").lower()
@@ -239,7 +286,7 @@ async def append_files(
     if not sub:
         raise HTTPException(404, "Submission not found")
 
-    _save_step_files(
+    saved_paths = _save_step_files(
         db=db,
         sub=sub,
         course=sub.course,
@@ -251,6 +298,12 @@ async def append_files(
         user_id=int(user.sub),
         student_id=(studentId or sub.student_id),
     )
+    if stepIndex == 6:
+        for mark_path in saved_paths:
+            try:
+                sync_tutor_mark_from_file(db, sub, mark_path)
+            except Exception as exc:
+                raise HTTPException(status_code=500, detail=f"Failed to sync tutor mark: {exc}")
     sub.status = compute_status(sub)
     base_assignment: Path = assignment_dir(sub.course, sub.term, sub.assignment_name, sub.assignment_id or 0)
     sid_for_meta = (studentId or sub.student_id or f"unknown-{sub.id}").lower()
