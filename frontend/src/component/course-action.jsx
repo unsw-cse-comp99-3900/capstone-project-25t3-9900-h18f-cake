@@ -15,8 +15,8 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                     sx: {
                         borderRadius: 3,
                         overflow: "hidden",
-                        width: 500,      // px number is fine
-                        maxWidth: "90vw" // keep responsive
+                        width: 500,      
+                        maxWidth: "90vw" 
                     }
                 }
             }}

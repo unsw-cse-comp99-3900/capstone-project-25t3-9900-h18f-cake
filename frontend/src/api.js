@@ -40,6 +40,17 @@ export const courses = {
     remove: (id) => DEL(`/v1/courses/${id}`),
 };
 
+export const markingResults = {
+    byCourseId: (courseId) => GET(`/v1/marking_result/by_id/${courseId}`),
+    upsert: (courseId, payload) => POST(`/v1/marking_result/${courseId}/append`, payload),
+    status: (courseId) => GET(`/v1/marking_result/${courseId}/status`),
+    setStatus: (courseId, aiCompleted) =>
+        request(`/v1/marking_result/${courseId}/status`, {
+            method: "PUT",
+            body: { ai_completed: Boolean(aiCompleted) },
+        }),
+};
+
 export const health = {
     ping: () => GET("/health"),
 };
@@ -106,5 +117,15 @@ export const submissions = {
     },
 };
 
-const API = { health, auth, courses, assignments, submissions, getToken, setToken, clearToken };
+const API = {
+    health,
+    auth,
+    courses,
+    assignments,
+    submissions,
+    markingResults,
+    getToken,
+    setToken,
+    clearToken,
+};
 export default API;
