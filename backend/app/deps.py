@@ -19,7 +19,7 @@ def get_current_user(creds: HTTPAuthorizationCredentials = Depends(auth_scheme))
         payload = decode_token(token)
         return UserClaims(sub=str(payload.get("sub")), role=payload.get("role"))
     except ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Login expired, please log out and log in again")
     except InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 

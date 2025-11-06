@@ -143,17 +143,17 @@ export default function CoursesPage() {
             toast.error("Missing course identifier.");
             return;
         }
-
-        try {
-            const status = await API.markingResults.status(c._id);
-            if (!status?.ai_completed) {
-                toast.info("AI results not finished yet. Please wait.");
-                return;
-            }
-        } catch (err) {
-            toast.error(err?.message || "Failed to check AI results status.");
-            return;
-        }
+        // temporary disabled for front end testing
+        // try {
+        //     const status = await API.markingResults.status(c._id);
+        //     if (!status?.ai_completed) {
+        //         toast.info("AI results not finished yet. Please wait.");
+        //         return;
+        //     }
+        // } catch (err) {
+        //     toast.error(err?.message || "Failed to check AI results status.");
+        //     return;
+        // }
 
         const term = c.term || c.year_term || "";
         closeActions();
