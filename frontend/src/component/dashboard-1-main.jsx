@@ -40,7 +40,7 @@ const columns = [
         width: 120,
         align: "center",
         headerAlign: "center",  
-        valueGetter: (_val, row) => (row?.revised_mark ?? 0),
+        valueGetter: (_val, row) => (row?.revised_mark ?? ""),
     },
     {
         field: "revised_feedback",
