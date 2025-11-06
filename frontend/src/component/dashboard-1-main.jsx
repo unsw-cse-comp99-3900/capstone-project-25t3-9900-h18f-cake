@@ -33,7 +33,34 @@ const columns = [
                 {params.value}
             </Box>
         ),
+    },
+    {
+        field: "revised_mark",
+        headerName: "Revised Mark",
+        width: 120,
+        align: "center",
+        headerAlign: "center",  
+        valueGetter: (_val, row) => (row?.revised_mark ?? 0),
+    },
+    {
+        field: "revised_feedback",
+        headerName: "Revised Feedback",
+        flex: 1,
+        renderCell: (params) => (
+            <Box
+                sx={{
+                    whiteSpace: "normal",
+                    wordBreak: "break-word",
+                    lineHeight: 1.4,
+                    py: 1,
+                    overflow: "visible",
+                }}
+            >
+                {params.value}
+            </Box>
+        ),
     }
+
 ];
 
 

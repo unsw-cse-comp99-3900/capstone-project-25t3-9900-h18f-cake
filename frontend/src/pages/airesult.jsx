@@ -8,6 +8,7 @@ import {
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import FlagIcon from "@mui/icons-material/Flag";
+import AddTaskIcon from '@mui/icons-material/AddTask';
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -21,54 +22,116 @@ import Sidebar, { SIDEBAR_WIDTH } from "../component/sidebar";
 
 const TOPBAR_HEIGHT = 72;
 
-// Review 组件
+// Review 
 function ReviewDashboard({ rows }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [reviewComments, setReviewComments] = useState({});
     const [decisions, setDecisions] = useState({});
     const [selectedAssignment, setSelectedAssignment] = useState("all");
 
-    // 筛选需要 Review 的项目
-    const needsReviewRows = useMemo(() => {
-        const filtered = rows.filter(row => 
-            row.needsReview || Math.abs(row.difference) >= 5
-        );
-        
-        if (selectedAssignment !== "all") {
-            return filtered.filter(row => row.assignment === selectedAssignment);
-        }
-        
-        return filtered;
-    }, [rows, selectedAssignment]);
+    // Filter student assignments to review //disabled for frontend testing
+    // const needsReviewRows = useMemo(() => {
+    //     const filtered = rows.filter(row => 
+    //         row.needsReview || Math.abs(row.difference) >= 5
+    //     );
+
+    //     if (selectedAssignment !== "all") {
+    //         return filtered.filter(row => row.assignment === selectedAssignment);
+    //     }
+
+    //     return filtered;
+    // }, [rows, selectedAssignment]);
+    // --- Dummy data for testing ---
+    const dummyRows = [
+        {
+            id: 1,
+            studentID: "z1234567",
+            studentName: "Alice Johnson",
+            assignment: "Assignment 1",
+            needsReview: true,
+            tutormark: 80,
+            difference: 8,
+            originalMark: 75,
+            revisedMark: 83,
+        },
+        {
+            id: 2,
+            studentID: "z7654321",
+            studentName: "Bob Smith",
+            assignment: "Assignment 2",
+            needsReview: false,
+            difference: 2,
+            originalMark: 68,
+            revisedMark: 70,
+        },
+        {
+            id: 3,
+            studentID: "z1111111",
+            studentName: "Charlie Nguyen",
+            assignment: "Assignment 1",
+            needsReview: true,
+            difference: 6,
+            originalMark: 59,
+            revisedMark: 65,
+        },
+        {
+            id: 4,
+            studentID: "z2222222",
+            studentName: "Dana Lee",
+            assignment: "Assignment 3",
+            needsReview: false,
+            difference: 10,
+            originalMark: 88,
+            revisedMark: 98,
+        },
+        {
+            id: 5,
+            studentID: "z3333333",
+            studentName: "Ethan Wang",
+            assignment: "Assignment 2",
+            needsReview: false,
+            difference: 0,
+            originalMark: 72,
+            revisedMark: 72,
+        },
+    ];
+
+    const needsReviewRows = dummyRows;
 
     const currentItem = needsReviewRows[currentIndex];
 
-    const assignments = useMemo(() => 
-        [...new Set(rows.map(item => item.assignment))], 
-    [rows]);
+    const assignments = useMemo(() =>
+        [...new Set(rows.map(item => item.assignment))],
+        [rows]);
 
     const handleDecision = (studentID, decision) => {
         setDecisions(prev => ({
             ...prev,
-            [studentID]: { 
-                decision, 
+            [studentID]: {
+                decision,
                 comments: reviewComments[studentID] || "",
                 timestamp: new Date().toLocaleString()
             }
         }));
-        
+
         // 自动跳到下一个
         if (currentIndex < needsReviewRows.length - 1) {
             setCurrentIndex(prev => prev + 1);
         }
     };
 
+    const [reviewMarks, setReviewMarks] = useState({});
+
+    const handleMarkChange = (studentID, revisedMark) => {
+        setReviewMarks(prev => ({ ...prev, [studentID]: revisedMark }));
+    };
     const handleCommentChange = (studentID, comment) => {
         setReviewComments(prev => ({
             ...prev,
             [studentID]: comment
         }));
     };
+
 
     const getStatusChip = (status) => {
         const statusConfig = {
@@ -91,17 +154,17 @@ function ReviewDashboard({ rows }) {
     return (
         <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
             {/* Review Header */}
-            <Paper sx={{ p: 2, mb: 2, bgcolor: "primary.main", color: "white" }}>
-                <Typography variant="h4" gutterBottom>
+            <Paper sx={{ p: 2, bgcolor: "primary.main", color: "white" }}>
+                <Typography variant="h6" gutterBottom>
                     Marking Review & Reconciliation
                 </Typography>
                 <Typography variant="body1">
-                    Review submissions where AI and tutor marks differ significantly
+                    Please review and reconcile the marks for the following students:
                 </Typography>
             </Paper>
 
             {/* Filters */}
-            <Paper sx={{ p: 2, mb: 2 }}>
+            <Paper sx={{ p: 2}}>
                 <Stack direction="row" spacing={2} alignItems="center">
                     <FormControl size="small" sx={{ minWidth: 200 }}>
                         <InputLabel>Filter by Assignment</InputLabel>
@@ -121,11 +184,11 @@ function ReviewDashboard({ rows }) {
                             ))}
                         </Select>
                     </FormControl>
-                    
-                    <Chip 
-                        label={`${needsReviewRows.length} items need review`} 
-                        color="warning" 
-                        variant="outlined" 
+
+                    <Chip
+                        label={`${needsReviewRows.length} items need review`}
+                        color="warning"
+                        variant="outlined"
                     />
                 </Stack>
             </Paper>
@@ -141,20 +204,20 @@ function ReviewDashboard({ rows }) {
                     </Typography>
                 </Stack>
                 <Box sx={{ width: "100%", height: 8, bgcolor: "white", borderRadius: 4, overflow: "hidden", mt: 1 }}>
-                    <Box 
-                        sx={{ 
-                            height: "100%", 
-                            bgcolor: "success.main", 
+                    <Box
+                        sx={{
+                            height: "100%",
+                            bgcolor: "success.main",
                             width: `${((currentIndex + 1) / needsReviewRows.length) * 100}%`,
                             transition: "width 0.3s ease"
-                        }} 
+                        }}
                     />
                 </Box>
             </Paper>
 
             {/* Current Item for Review */}
             {currentItem && (
-                <Card sx={{ mb: 2, flexGrow: 1 ,overflowY: "auto"}}>
+                <Card sx={{ mb: 2, flexGrow: 1, overflowY: "auto" }}>
                     <CardContent sx={{ p: 3 }}>
                         <Stack spacing={3}>
                             {/* Header */}
@@ -171,28 +234,28 @@ function ReviewDashboard({ rows }) {
                             </Box>
 
                             {/* Marks Comparison */}
-                            <Paper variant="outlined" sx={{ p: 3, bgcolor: "grey.50" }}>
-                                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <Paper variant="outlined" sx={{ p: 3, bgcolor: "grey.50"}}>
+                                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1}}>
                                     <FlagIcon color="warning" />
                                     Marks Comparison
                                 </Typography>
                                 <Stack direction="row" spacing={6} sx={{ mt: 2 }}>
                                     <Box sx={{ textAlign: "center" }}>
                                         <Typography variant="body1" color="text.secondary">Tutor Mark</Typography>
-                                        <Typography variant="h3" color="primary.main" fontWeight="bold">
+                                        <Typography variant="h4" color="primary.main" fontWeight="bold">
                                             {currentItem.tutorMark}
                                         </Typography>
                                     </Box>
                                     <Box sx={{ textAlign: "center" }}>
                                         <Typography variant="body1" color="text.secondary">AI Mark</Typography>
-                                        <Typography variant="h3" color="secondary.main" fontWeight="bold">
+                                        <Typography variant="h4" color="secondary.main" fontWeight="bold">
                                             {currentItem.aiMark}
                                         </Typography>
                                     </Box>
                                     <Box sx={{ textAlign: "center" }}>
                                         <Typography variant="body1" color="text.secondary">Difference</Typography>
-                                        <Typography 
-                                            variant="h3" 
+                                        <Typography
+                                            variant="h4"
                                             color={Math.abs(currentItem.difference) >= 5 ? "error.main" : "text.primary"}
                                             fontWeight="bold"
                                         >
@@ -205,7 +268,7 @@ function ReviewDashboard({ rows }) {
                             {/* Feedback */}
                             {currentItem.feedback && (
                                 <Paper variant="outlined" sx={{ p: 2 }}>
-                                    <Typography variant="h6" gutterBottom>Tutor Feedback</Typography>
+                                    <Typography variant="h6" gutterBottom>AI Feedback</Typography>
                                     <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
                                         {currentItem.feedback}
                                     </Typography>
@@ -213,17 +276,52 @@ function ReviewDashboard({ rows }) {
                             )}
 
                             {/* Review Comments */}
-                            <Paper variant="outlined" sx={{ p: 2 }}>
-                                <Typography variant="h6" gutterBottom>Your Review Comments</Typography>
-                                <TextField
-                                    multiline
-                                    rows={4}
-                                    value={reviewComments[currentItem.studentID] || ""}
-                                    onChange={(e) => handleCommentChange(currentItem.studentID, e.target.value)}
-                                    placeholder="Provide your assessment of the marking discrepancy and any additional comments..."
-                                    fullWidth
-                                    variant="outlined"
-                                />
+                            <Paper variant="outlined" 
+                            sx={{ 
+                                p: 2, 
+                                bgcolor: "grey.50",
+                                }}>
+                                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                    <AddTaskIcon color="warning" />
+                                    Review
+                                </Typography>
+
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        gap: 2,
+                                        alignItems: "stretch",
+                                        flexDirection: { xs: "column", sm: "row" }, // stack on mobile, side-by-side on sm+
+                                    }}
+                                >
+                                    {/* Left: Marks box */}
+                                    <TextField
+                                        label="Revised Marks"
+                                        type="number"
+                                        value={reviewMarks[currentItem.studentID] ?? ""}
+                                        onChange={(e) => handleMarkChange(currentItem.studentID, e.target.value)}
+                                        variant="outlined"
+                                        inputProps={{ min: 0, max: 100, step: 1 }}
+                                        sx={{
+                                            width: { xs: "100%", sm: 180 }, // fixed width on desktop, full on mobile
+                                        }}
+                                        helperText="0-100"
+                                    />
+
+                                    {/* Right: Comment area */}
+                                    <TextField
+                                        label="Your Review Comments"
+                                        multiline
+                                        rows={4}
+                                        value={reviewComments[currentItem.studentID] ?? ""}
+                                        onChange={(e) =>
+                                            handleCommentChange(currentItem.studentID, e.target.value)
+                                        }
+                                        placeholder="Provide your assessment of the marking discrepancy and any additional comments..."
+                                        fullWidth
+                                        variant="outlined"
+                                    />
+                                </Box>
                             </Paper>
 
                             {/* Action Buttons */}
@@ -281,8 +379,8 @@ function ReviewDashboard({ rows }) {
                                                     Reviewed: {decisionData.timestamp}
                                                 </Typography>
                                             </Box>
-                                            <Chip 
-                                                label={decisionData.decision === "approved" ? "Approved" : "Rejected"} 
+                                            <Chip
+                                                label={decisionData.decision === "approved" ? "Approved" : "Rejected"}
                                                 color={decisionData.decision === "approved" ? "success" : "error"}
                                                 size="medium"
                                             />
@@ -315,7 +413,7 @@ export default function Airesult() {
 
     useEffect(() => {
         if (!courseId) {
-            setFetchError("缺少课程ID，请从课程列表进入查看。");
+            setFetchError("Missing course ID, please try again.");
             setRows([]);
             return;
         }
@@ -378,7 +476,7 @@ export default function Airesult() {
             })
             .catch((err) => {
                 if (cancelled) return;
-                setFetchError(err?.message || "加载AI结果失败，请稍后再试。");
+                setFetchError(err?.message || "Loading AI failed");
                 setRows([]);
             })
             .finally(() => {
@@ -486,7 +584,7 @@ export default function Airesult() {
 
             {/* ── Sidebar + Main content ── */}
             <Box sx={{ display: "flex", flexGrow: 1 }}>
-                <Sidebar topOffset={TOPBAR_HEIGHT} setDashboardOpen={setDashboardOpen}/>
+                <Sidebar topOffset={TOPBAR_HEIGHT} setDashboardOpen={setDashboardOpen} />
 
                 <Box
                     component="main"
@@ -501,8 +599,8 @@ export default function Airesult() {
                         px: 4,
                         maxWidth: "90vw",
                         // mx: "auto",
-                        overflowY: "auto", // ✅ 关键：内容超出时显示垂直滚动条
-                        scrollBehavior: "smooth",               
+                        overflowY: "auto", 
+                        scrollBehavior: "smooth",
                         // maxHeight: "90vh",
                         mx: "auto",
                     }}
@@ -595,11 +693,11 @@ export default function Airesult() {
                             {/* Content area */}
                             <Box sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}>
                                 {variant === "studentView" ? (
-                                    <Box sx={{ width: "100%", height: "100%" ,display: "flex", flexDirection: "column", overflowY: "auto"}}>
+                                    <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", overflowY: "auto" }}>
                                         <DashboardStudent variant="studentView" rows={filteredRows} />
                                     </Box>
                                 ) : (
-                                    <Box sx={{ width: "100%", height: "80%" ,display: "flex", flexDirection: "column", overflowY: "auto"}}>
+                                    <Box sx={{ width: "100%", height: "80%", display: "flex", flexDirection: "column", overflowY: "auto" }}>
                                         <DashboardTutorScatter variant="tutorView" rows={filteredRows} />
                                     </Box>
                                 )}
