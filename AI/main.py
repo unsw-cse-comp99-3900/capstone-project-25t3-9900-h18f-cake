@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import subprocess
 from datetime import datetime
 import runpy
 
@@ -8,6 +9,16 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(ROOT_DIR, "scripts"))
 
 def main():
+    signal_path = os.path.join(ROOT_DIR, "pipeline_done.signal")
+    if os.path.exists(signal_path):
+        try:
+            os.chmod(signal_path, 0o666)
+            os.remove(signal_path)
+            print(f"[INFO] Old signal forcibly removed (Python): {signal_path}")
+        except PermissionError:
+            print(f"[WARN] Python cannot remove {signal_path}, trying system force removal...")
+            subprocess.run(["rm", "-f", signal_path], check=False)
+            print(f"[INFO] Old signal removed using system command.")
     parser = argparse.ArgumentParser(description="AI_Moule: Automated Grading Pipeline")
     parser.add_argument(
         "--o",
@@ -25,20 +36,22 @@ def main():
         if args.o in ["0", "all"]:
             print("\n[STEP 0] Building rubric from assignment requirements ...")
             runpy.run_module("scripts.rubric_assign_req", run_name="__main__")
-            print("[✅] Step 0 completed successfully.")
+            print("[INFO] Step 0 completed successfully.")
 
         if args.o in ["1", "all"]:
             print("\n[STEP 1] Learning teacher scoring preferences ...")
             runpy.run_module("scripts.teacher_rubric_learning", run_name="__main__")
-            print("[✅] Step 1 completed successfully.")
+            print("[INFO] Step 1 completed successfully.")
 
         if args.o in ["2", "all"]:
             print("\n[STEP 2] Predicting scores for new assignments ...")
             runpy.run_module("scripts.predict_scores", run_name="__main__")
-            print("[✅] Step 2 completed successfully.")
+            print("[INFO] Step 2 completed successfully.")
+            with open(signal_path, "w") as f:
+                f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     except Exception as e:
-        print(f"[❌ ERROR] Pipeline failed: {e}")
+        print(f"[ERROR] Pipeline failed: {e}")
 
     print("\n========== [Pipeline Finished] ==========")
     print(f"[INFO] Ended at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
