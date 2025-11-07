@@ -31,3 +31,16 @@ openai>=1.40.0
 
 # Visualization (optional)
 matplotlib==3.9.2
+
+
+
+# http service 
+fastapi
+uvicorn
+PyMuPDF
+paddleocr
+python-docx
+tqdm
+numpy
+opencv-python
+python-multipart
