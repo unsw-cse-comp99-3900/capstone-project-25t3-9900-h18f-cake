@@ -270,6 +270,8 @@ def append_marking_result(
         incoming["ai_total"] = to_float(incoming["ai_total"])
     if "tutor_total" in incoming:
         incoming["tutor_total"] = to_float(incoming["tutor_total"])
+    zid_norm = zid.lower()
+    aid = incoming.get("assignment_id")
 
     existing_idx = None
     for idx, rec in enumerate(data["marking_results"]):
@@ -297,7 +299,8 @@ def append_marking_result(
     elif difference is not None and tutor_value not in (None, 0):
         record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
     else:
-        needs_review = bool(record.get("needs_review"))
+        # Preserve existing value (if any) or default to False for new records
+        record["needs_review"] = bool(record.get("needs_review"))
 
     # upsert by zid
     updated = False
