@@ -1,4 +1,5 @@
 import os
+import re
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 TOTAL_SCORE = 30
@@ -9,6 +10,13 @@ API_KEY_ENV = "OPENAI_API_KEY"
 USE_LLM = True
 LLM_TEMPERATURE = 0.2
 LLM_MAX_RETRIES = 3
+
+CLEANED_DIR = os.path.join(BASE_DIR, "artifacts/cleaned")
+CHUNK_DIR = os.path.join(BASE_DIR, "artifacts/chunks")
+CHUNK_EMB_DIR = os.path.join(BASE_DIR, "artifacts/chunk_embs")
+RUBRIC2CHUNK_DIR = os.path.join(BASE_DIR, "artifacts/rubric2chunk")
+RUBRIC2TEXT_DIR = os.path.join(BASE_DIR, "artifacts/rubric2text")
+RESULTS_DIR = os.path.join(BASE_DIR, "artifacts/results")
 
 RUBRIC_DIR = os.path.join(BASE_DIR, "artifacts/rubric/")
 
@@ -30,11 +38,19 @@ RUBRIC_TEACHER_PATH = os.path.join(RUBRIC_DIR,"rubric_teacher.json")#LLM Generat
 PROMPT_DIR = os.path.join(BASE_DIR, "src/prompt/")
 MARKED_ASSIGN_DIR = os.path.join(MARKED_DIR, "assignments/")
 
+
 LLM_PREDICTION_DIR = os.path.join(BASE_DIR, "artifacts/prediction/")
 TEST_DIR = os.path.join(BASE_DIR, "data/test")
 LLM_PREDICTION = os.path.join(LLM_PREDICTION_DIR,"assignements_score.json") #marked by llm
+# LLM_PREDICTION_DIR =  os.path.abspath(os.path.join(BASE_DIR, "../backend/marking_result"))
+# TEST_DIR =os.path.abspath(os.path.join(BASE_DIR, "../backend/uploads"))
+# LLM_PREDICTION = os.path.join(LLM_PREDICTION_DIR, "ai_latest_results.json") #marked by llm
 TEST_IMAGES = os.path.join(TEST_DIR, "images/")
 
+
+def extract_student_id(filename: str) -> str | None:
+    m = re.search(r"[zZ]\d{7}", filename or "")
+    return m.group(0).lower() if m else None
 
 def is_rubric_file(file_path: str) -> bool:
     if not os.path.isfile(file_path):
@@ -103,7 +119,7 @@ def path_generation(input_path):
             "cleaned_text_para": os.path.join(CLEANED_DIR, f"{student_id}_para.txt"),
             "chunks": os.path.join(CHUNK_DIR, f"{student_id}.json"),
             "chunk_embeddings": os.path.join(CHUNK_EMB_DIR, f"{student_id}.npy"),
-            "rubric_teacher":RUBRIC_Teacher_PATH,
+            "rubric_teacher": RUBRIC_TEACHER_PATH,
             "rubric2chunk":os.path.join(RUBRIC2CHUNK_DIR,f"{student_id}.json"),
             "rubric2text":os.path.join(RUBRIC2TEXT_DIR,f"{student_id}.json"),
            

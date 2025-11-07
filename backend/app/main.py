@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, courses, assignments, submissions, marking_result_manage
+from app.routers import auth, courses, assignments, submissions, marking_result_manage, extract_infomation, ai_router
 
 from app.db import Base, engine
-from app import models  
+from app import models
 
-app = FastAPI(title="Grader Backend (Poetry no-AI)", version="0.1.0")
+app = FastAPI(title="Grader Backend (Poetry + AI)", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,6 +24,11 @@ app.include_router(courses.router)
 app.include_router(assignments.router)
 app.include_router(submissions.router)
 app.include_router(marking_result_manage.router)
+
+app.include_router(extract_infomation.router)
+
+
+app.include_router(ai_router.router)  
 
 @app.get("/health")
 def health():
