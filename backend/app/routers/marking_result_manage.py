@@ -16,7 +16,7 @@ router = APIRouter(prefix="/v1/marking_result", tags=["marking_result"])
 
 # ---------- Utils ----------
 _TERM_RX = re.compile(r"^\s*(\d{4})\s*(?:Term|T)?\s*([0-9]+)\s*$", re.IGNORECASE)
-_REVIEW_DIFF_THRESHOLD = 2  # TODO: move to config if needed
+_REVIEW_DIFF_THRESHOLD = 0.2  # TODO: move to config if needed
 
 
 def parse_term(term: str) -> Tuple[str, str]:
