@@ -23,8 +23,10 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "app", from = "src"}]
-
+packages = [
+  { include = "app", from = "src" },   # your FastAPI backend
+  { include = "AI" }                   # your AI module at project root
+]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
