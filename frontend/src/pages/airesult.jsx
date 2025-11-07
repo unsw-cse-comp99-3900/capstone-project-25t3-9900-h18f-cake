@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import {
     Box, Stack, IconButton, Typography,
     ToggleButton, ToggleButtonGroup,
@@ -27,7 +27,7 @@ const TOPBAR_HEIGHT = 72;
  * - Now posts to API instead of only logging
  * - Receives `courseId` so the backend can identify the context
  * ────────────────────────────────────────────────────────────────────────────*/
-function ReviewDashboard({ rows, courseId }) {
+function ReviewDashboard({ rows, courseId, onReviewed = () => {} }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [reviewComments, setReviewComments] = useState({});
     const [selectedAssignment, setSelectedAssignment] = useState("all");
@@ -52,9 +52,11 @@ function ReviewDashboard({ rows, courseId }) {
 
     // ⟵ UPDATED: call API to persist revised mark/comments
     const handleDecision = async (studentID) => {
+        const totalBefore = needsReviewRows.length;
         const payload = {
             zid: currentItem?.zid ?? String(studentID),
             assignment: currentItem?.assignment ?? "",
+            assignment_id: currentItem?.assignmentId ?? null,
             needsReview: false,
             review_mark: reviewMarks[studentID] ?? 0,
             review_comments: reviewComments[studentID] ?? "",
@@ -71,14 +73,20 @@ function ReviewDashboard({ rows, courseId }) {
                 `Comments: ${payload.review_comments}`
                 );
 
-            // advance to next item
-            if (currentIndex < needsReviewRows.length - 1) {
-                setCurrentIndex((prev) => prev + 1);
-            } else if (currentIndex === needsReviewRows.length - 1) {
+            onReviewed({
+                zid: payload.zid,
+                assignmentId: payload.assignment_id,
+                assignment: payload.assignment,
+                reviewMark: payload.review_mark,
+                reviewComments: payload.review_comments,
+            });
+
+            const remaining = Math.max(0, totalBefore - 1);
+            if (remaining === 0) {
                 toast.success("🎉 All submissions have been reviewed!");
-                setCurrentIndex(0); // reset index to avoid overflow
-                needsReviewRows.length = 0;
-                
+                setCurrentIndex(0);
+            } else {
+                setCurrentIndex((prev) => Math.min(prev, Math.max(0, remaining - 1)));
             }
         } catch (e) {
             toast.error(e?.message || "Failed to save revised mark");
@@ -356,6 +364,7 @@ export default function Airesult() {
                         difference: diff,
                         feedback: item.ai_feedback || item.feedback || "",
                         assignment: item.assignment || "Unassigned",
+                        assignmentId: item.assignment_id ?? null,
                         needsReview,
                         reviewMark: item.review_mark ?? "",
                         reviewComments: item.review_comments ?? "",
@@ -387,6 +396,31 @@ export default function Airesult() {
     const [variant, setVariant] = useState("studentView");
     const [selectedAssignment, setSelectedAssignment] = useState("all");
     const [selectedTutor, setSelectedTutor] = useState("all");
+    const handleReviewed = useCallback(
+        ({ zid, assignmentId, assignment, reviewMark, reviewComments }) => {
+            if (!zid) return;
+            setRows((prev) =>
+                prev.map((row) => {
+                    if (row.zid !== zid) return row;
+                    const matchesAssignment =
+                        assignmentId != null
+                            ? row.assignmentId === assignmentId
+                            : assignment
+                                ? row.assignment === assignment
+                                : true;
+                    if (!matchesAssignment) return row;
+                    return {
+                        ...row,
+                        needsReview: false,
+                        reviewMark: reviewMark ?? row.reviewMark,
+                        reviewComments: reviewComments ?? row.reviewComments,
+                        reviewStatus: "completed",
+                    };
+                })
+            );
+        },
+        []
+    );
 
     // ⟵ UPDATED: derive purely from API rows
     const availableAssignments = useMemo(() => {
@@ -629,7 +663,7 @@ export default function Airesult() {
                             </Box>
                         </>
                     ) : dashboardOpen === "review" ? (
-                        <ReviewDashboard rows={rowsForUI} courseId={courseId} />
+                        <ReviewDashboard rows={rowsForUI} courseId={courseId} onReviewed={handleReviewed} />
                     ) : (
                         <Typography variant="h4">Coming Soon...</Typography>
                     )}
