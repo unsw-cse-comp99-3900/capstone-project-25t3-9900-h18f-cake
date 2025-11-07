@@ -7,14 +7,24 @@ import os
 import zipfile
 from typing import Optional
 import fitz
-from paddleocr import PaddleOCR
 from docx import Document
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from tqdm import tqdm
-import paddle
 import numpy as np
 import cv2
-paddle.set_device("cpu")
+
+try:
+    from paddleocr import PaddleOCR
+    import paddle
+    try:
+        paddle.set_device("cpu")
+    except Exception:
+        pass
+    _PADDLE_IMPORT_ERROR = None
+except Exception as exc:  # pragma: no cover - log friendly fallback
+    PaddleOCR = None
+    paddle = None
+    _PADDLE_IMPORT_ERROR = exc
 # OCR 依赖（可选）
 try:
     import fitz  # PyMuPDF
@@ -140,11 +150,21 @@ class DataLoader:
         return (readable / max(len(text), 1)) < self.alpha_ratio
 
     def ocr_pdf(self, path):
+        if PaddleOCR is None:
+            if _OCR_AVAILABLE:
+                print("[WARN] PaddleOCR unavailable. Falling back to pytesseract OCR.")
+                return self._ocr_pdf_with_tesseract(path)
+            raise ImportError(
+                "PaddleOCR could not be imported and no fallback OCR engine is available. "
+                "Install paddleocr with numpy<2 or rebuild with numpy>=2, or install pytesseract."
+            ) from _PADDLE_IMPORT_ERROR
+
         ocr = getattr(self, "ocr", None)
         if ocr is None:
             ocr = PaddleOCR(use_textline_orientation=True, lang="en")
             try:
-                paddle.set_device("cpu")
+                if paddle:
+                    paddle.set_device("cpu")
             except Exception:
                 pass
             self.ocr = ocr
@@ -206,6 +226,33 @@ class DataLoader:
                             continue
                         page_lines.append(txt)
             texts.append("\n".join(page_lines).strip())
+
+        doc.close()
+        return "\n".join(texts).strip()
+
+    def _ocr_pdf_with_tesseract(self, path):
+        if not _OCR_AVAILABLE:
+            raise RuntimeError("pytesseract/PIL dependencies missing for OCR fallback.")
+
+        doc = fitz.open(path)
+        texts = []
+        total_pages = len(doc) if self.max_pages is None else min(len(doc), self.max_pages)
+
+        for page_idx in tqdm(range(total_pages), desc="OCR Pages (tesseract)", unit="page"):
+            page = doc[page_idx]
+            pix = page.get_pixmap(matrix=fitz.Matrix(self.dpi / 72, self.dpi / 72), alpha=False)
+
+            mode = "RGB"
+            if pix.n == 4:
+                mode = "RGBA"
+            elif pix.n == 1:
+                mode = "L"
+            img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+            if mode in ("RGBA", "LA"):
+                img = img.convert("RGB")
+
+            text = pytesseract.image_to_string(img, lang=self.ocr_lang or "eng")
+            texts.append(text.strip())
 
         doc.close()
         return "\n".join(texts).strip()

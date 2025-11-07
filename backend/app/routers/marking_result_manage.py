@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List, Tuple
 import json, datetime, re
 from fastapi import UploadFile, File
@@ -105,10 +105,13 @@ class MarkingIn(BaseModel):
     third_person_review_mark: Optional[float] = None
     ai_feedback: Optional[str] = None
     tutor_feedback: Optional[str] = None
-    needs_review: Optional[bool] = None
+    needs_review: Optional[bool] = Field(default=None, alias="needsReview")
     review_status: Optional[str] = None
     review_mark: Optional[float] = None
     review_comments: Optional[str] = None
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 class MarkingOut(MarkingIn):
@@ -257,36 +260,49 @@ def append_marking_result(
         except (TypeError, ValueError):
             return None
 
-    record = payload.dict()
-    record["zid"] = str(record.get("zid", "")).strip()
-    zid_norm = record["zid"].lower()
-    aid = record.get("assignment_id")
+    incoming = payload.dict(exclude_unset=True)
+    zid = str(incoming.get("zid") or payload.zid or "").strip()
+    if not zid:
+        raise HTTPException(status_code=400, detail="zid is required")
 
-    ai_value    = to_float(record.get("ai_total"))
-    tutor_value = to_float(record.get("tutor_total"))
-    difference  = (
-        round(ai_value - tutor_value, 2)
-        if (ai_value is not None and tutor_value is not None)
-        else None
-    )
+    incoming["zid"] = zid
+    if "ai_total" in incoming:
+        incoming["ai_total"] = to_float(incoming["ai_total"])
+    if "tutor_total" in incoming:
+        incoming["tutor_total"] = to_float(incoming["tutor_total"])
+    zid_norm = zid.lower()
+    aid = incoming.get("assignment_id")
 
-    if difference is not None and tutor_value not in (None, 0):
-        needs_review = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
+    existing_idx = None
+    for idx, rec in enumerate(data["marking_results"]):
+        if isinstance(rec, dict) and rec.get("zid") == zid:
+            existing_idx = idx
+            break
+
+    if existing_idx is not None:
+        record = {**data["marking_results"][existing_idx]}
     else:
-        needs_review = bool(record.get("needs_review"))
+        record = {"zid": zid, "created_at": _now_utc_iso()}
 
-    record.update(
-        {
-            "ai_total": ai_value,
-            "tutor_total": tutor_value,
-            "difference": difference,
-            "zid": zid_norm,                    
-            "assignment": record.get("assignment") or "",
-            "student_name": record.get("student_name") or "",
-            "marked_by": record.get("marked_by") or "",
-        }
-    )
+    record.update({k: v for k, v in incoming.items() if k != "needs_review"})
 
+    ai_value = record.get("ai_total")
+    tutor_value = record.get("tutor_total")
+    difference: Optional[float] = None
+    if ai_value is not None and tutor_value is not None:
+        difference = round(ai_value - tutor_value, 2)
+    record["difference"] = difference
+
+    # needs_review rule (auto unless explicitly provided)
+    if "needs_review" in incoming:
+        record["needs_review"] = bool(incoming["needs_review"])
+    elif difference is not None and tutor_value not in (None, 0):
+        record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
+    else:
+        # Preserve existing value (if any) or default to False for new records
+        record["needs_review"] = bool(record.get("needs_review"))
+
+    # upsert by zid
     updated = False
     for i, r in enumerate(data["marking_results"]):
         if not isinstance(r, dict):
@@ -317,14 +333,4 @@ def append_marking_result(
         record.setdefault("created_at", _now_utc_iso())
         data["marking_results"].append(record)
     save_json_atomic(json_path, data)
-
-    resp = {k: record.get(k) for k in MarkingOut.__fields__.keys()}
-    resp["needs_review"] = needs_review
-    return MarkingOut(**resp)
-
-
-
-
-
-
-# Update AI marking for the course
+    return MarkingOut(**record)

@@ -14,3 +14,5 @@ __pycache__/
 # Temporary / intermediate outputs
 artifacts/
 results/
+
+data/
