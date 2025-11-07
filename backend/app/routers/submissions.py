@@ -310,7 +310,8 @@ async def append_files(
         student_id=(studentId or sub.student_id),
     )
     if stepIndex == 5 and sub.assignment_id:
-        background.add_task(run_ai_marking_pipeline, sub.assignment_id)
+      enq = get_jobq().enqueue(sub.assignment_id)
+      print(f"[AI][API] enqueue from append_files: assignment_id={sub.assignment_id}, enqueued={enq}", flush=True)
     if stepIndex == 6:
         for mark_path in saved_paths:
             try:

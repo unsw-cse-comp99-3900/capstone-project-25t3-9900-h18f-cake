@@ -241,53 +241,86 @@ def append_marking_result(
     if not c:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    json_path = course_json_path_by_course(c)
+    try:
+        json_path = course_json_path_by_course(c)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     data = load_json(json_path)
     data["course"] = c.code
     data["name"] = c.name or ""
     data["term"] = c.term or ""
-    def to_float(v): ...
+
+    def to_float(value: Any) -> Optional[float]:
+        try:
+            return float(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
     record = payload.dict()
-
-    # needs_review rule
-    if difference is not None and tutor_value not in (None, 0):
-        record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
-    else:
-        record["needs_review"] = bool(record.get("needs_review"))
-
-    record.setdefault("review_status", "pending")
-    record.setdefault("review_comments", "")
-    record.setdefault("assignment", "")
-    record.setdefault("student_name", "")
-    record.setdefault("marked_by", "")
-
-    now = _now_utc_iso()
-    record.setdefault("created_at", now)
-    record["updated_at"] = now
-    # ---------------------------------------------
-    zid = record["zid"].lower()
+    record["zid"] = str(record.get("zid", "")).strip()
+    zid_norm = record["zid"].lower()
     aid = record.get("assignment_id")
+
+    ai_value    = to_float(record.get("ai_total"))
+    tutor_value = to_float(record.get("tutor_total"))
+    difference  = (
+        round(ai_value - tutor_value, 2)
+        if (ai_value is not None and tutor_value is not None)
+        else None
+    )
+
+    if difference is not None and tutor_value not in (None, 0):
+        needs_review = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
+    else:
+        needs_review = bool(record.get("needs_review"))
+
+    record.update(
+        {
+            "ai_total": ai_value,
+            "tutor_total": tutor_value,
+            "difference": difference,
+            "zid": zid_norm,                    
+            "assignment": record.get("assignment") or "",
+            "student_name": record.get("student_name") or "",
+            "marked_by": record.get("marked_by") or "",
+        }
+    )
 
     updated = False
     for i, r in enumerate(data["marking_results"]):
         if not isinstance(r, dict):
             continue
-        same_zid = (str(r.get("zid", "")).lower() == zid)
-        same_aid = (r.get("assignment_id") == aid)
-        if same_zid and (same_aid or r.get("assignment_id") is None):
-            if "created_at" in r: 
+        if str(r.get("zid", "")).lower() == zid_norm and r.get("assignment_id") == aid:
+            # 保留原 created_at
+            if "created_at" in r and r["created_at"]:
                 record["created_at"] = r["created_at"]
+            else:
+                record.setdefault("created_at", _now_utc_iso())
             data["marking_results"][i] = record
             updated = True
             break
 
+    if not updated and aid is not None:
+        for i, r in enumerate(data["marking_results"]):
+            if not isinstance(r, dict):
+                continue
+            if str(r.get("zid", "")).lower() == zid_norm and r.get("assignment_id") is None:
+                if "created_at" in r and r["created_at"]:
+                    record["created_at"] = r["created_at"]
+                else:
+                    record.setdefault("created_at", _now_utc_iso())
+                data["marking_results"][i] = record
+                updated = True
+                break
     if not updated:
+        record.setdefault("created_at", _now_utc_iso())
         data["marking_results"].append(record)
-
     save_json_atomic(json_path, data)
-    return MarkingOut(**record)
 
-
+    resp = {k: record.get(k) for k in MarkingOut.__fields__.keys()}
+    resp["needs_review"] = needs_review
+    return MarkingOut(**resp)
 
 
 

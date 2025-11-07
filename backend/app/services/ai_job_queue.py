@@ -34,6 +34,7 @@ class AIJobQueue:
         self._q: "queue.Queue[int]" = queue.Queue()
         self._in_queue: set[int] = set()
         self._status: Dict[int, JobStatus] = {}
+        self._rerun: set[int] = set()
         self._t = threading.Thread(target=self._loop, daemon=True, name="ai-job-worker")
         self._t.start()
 
@@ -48,34 +49,40 @@ class AIJobQueue:
 
     def enqueue(self, assignment_id: int) -> bool:
         if assignment_id in self._in_queue:
-            print(f"[AI][QUEUE] already queued: {assignment_id}")
+            self._rerun.add(assignment_id)
+            print(f"[AI][QUEUE] already queued: {assignment_id} -> mark rerun", flush=True)
             return False
         self._in_queue.add(assignment_id)
         self._status[assignment_id] = JobStatus(state="queued", message="queued", updated_at=time.time())
         self._q.put(assignment_id)
-        print(f"[AI][QUEUE] put job: {assignment_id}")
+        print(f"[AI][QUEUE] put job: {assignment_id}", flush=True)
         return True
 
     def _loop(self):
-      while True:
-          aid = self._q.get()
-          st = self._status.get(aid) or JobStatus()
-          st.state = "running"; st.progress = 0.0; st.message = "starting"; st.updated_at = time.time()
-          self._status[aid] = st
-          proxy = StatusProxy(st, lambda: self._touch(aid))
-          try:
-              self.worker(aid, proxy)
-              st.state = "done"; st.progress = 1.0; st.message = "done"; st.updated_at = time.time()
-          except Exception:
-              st.state = "error"
-              st.error = traceback.format_exc()
-              st.message = "failed"
-              st.updated_at = time.time()
-          finally:
-              self._in_queue.discard(aid)
-              self._status[aid] = st
-              print(f"[AI][QUEUE] finish job: {aid}, state={st.state}", flush=True) 
-              self._q.task_done()
+        while True:
+            aid = self._q.get()
+            st = self._status.get(aid) or JobStatus()
+            st.state = "running"; st.progress = 0.0; st.message = "starting"; st.updated_at = time.time()
+            self._status[aid] = st
+            proxy = StatusProxy(st, lambda: self._touch(aid))
+            try:
+                self.worker(aid, proxy)
+                st.state = "done"; st.progress = 1.0; st.message = "done"; st.updated_at = time.time()
+            except Exception:
+                st.state = "error"
+                st.error = traceback.format_exc()
+                st.message = "failed"
+                st.updated_at = time.time()
+            finally:
+                if aid in self._rerun:
+                    self._rerun.discard(aid)
+                    self._q.put(aid)
+                    print(f"[AI][QUEUE] rerun scheduled: {aid}", flush=True)
+                else:
+                    self._in_queue.discard(aid)
+                    print(f"[AI][QUEUE] finish job: {aid}, state={st.state}", flush=True)
+                self._status[aid] = st
+                self._q.task_done()
 
     def _touch(self, aid: int):
         st = self._status.get(aid)
