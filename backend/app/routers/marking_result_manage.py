@@ -301,6 +301,3 @@ def append_marking_result(
 
     save_json_atomic(json_path, data)
     return MarkingOut(**record)
-
-
-
