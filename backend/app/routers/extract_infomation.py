@@ -88,6 +88,7 @@ def extract_and_update_marks(path: str, assignment_id: int):
             extracted = extractor.extract_marks(str(file))
             payload = {
                 "zid": extracted["zid"],
+                "assignment_id": assignment_id, 
                 "tutor_marking_detail": extracted["tutor_marking_detail"],
                 "tutor_total": extracted["tutor_total"],
                 "marked_by": "tutor",
