@@ -268,10 +268,6 @@ def append_marking_result(
     record = payload.dict()
 
     # needs_review rule
-    if difference is not None and tutor_value not in (None, 0):
-        record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
-    else:
-        record["needs_review"] = bool(record.get("needs_review"))
 
     record.setdefault("review_status", "pending")
     record.setdefault("review_comments", "")
