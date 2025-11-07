@@ -4,7 +4,7 @@ import {
     ToggleButton, ToggleButtonGroup,
     FormControl, InputLabel, Select, MenuItem, Tooltip,
     Paper, Button, Chip, Alert, Card, CardContent, TextField,
-    Switch, FormControlLabel
+    // Switch, FormControlLabel   // ⟵ REMOVED: dummy toggle
 } from "@mui/material";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -24,49 +24,61 @@ import { toast } from "sonner";
 const TOPBAR_HEIGHT = 72;
 
 /** ─────────────────────────────────────────────────────────────────────────────
- * ReviewDashboard (component)
- * - Stateless regarding data source; receives `rows` from parent
- * - Approve-only flow; on submit it logs and toasts
+ * ReviewDashboard
+ * - Now posts to API instead of only logging
+ * - Receives `courseId` so the backend can identify the context
  * ────────────────────────────────────────────────────────────────────────────*/
-function ReviewDashboard({ rows }) {
+function ReviewDashboard({ rows, courseId }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [reviewComments, setReviewComments] = useState({});
     const [selectedAssignment, setSelectedAssignment] = useState("all");
     const [reviewMarks, setReviewMarks] = useState({});
+    const [saving, setSaving] = useState(false);
 
-    // Filter items that need review
     const needsReviewRows = useMemo(() => {
-        const filtered = rows.filter(
-            (row) => row.needsReview || Math.abs(row.difference ?? 0) >= 5
-        );
-        return selectedAssignment === "all"
-            ? filtered
-            : filtered.filter((row) => row.assignment === selectedAssignment);
+    return rows.filter(
+        (row) =>
+        row.needsReview === true &&
+        (selectedAssignment === "all" || row.assignment === selectedAssignment)
+    );
     }, [rows, selectedAssignment]);
+
 
     const currentItem = needsReviewRows[currentIndex];
 
-    // Assignment list
     const assignments = useMemo(
         () => [...new Set(rows.map((item) => item.assignment))],
         [rows]
     );
 
-    const handleDecision = (studentID) => {
-        const result = {
-            studentID,
-            decision: "approved", // single flow
-            mark: reviewMarks[studentID] || 0,
-            comments: reviewComments[studentID] || "",
-            timestamp: new Date().toLocaleString(),
+    // ⟵ UPDATED: call API to persist revised mark/comments
+    const handleDecision = async (studentID) => {
+        const payload = {
+            course_id: courseId,
+            student_id: String(studentID),
+            zid: currentItem?.zid ?? String(studentID),
+            assignment: currentItem?.assignment ?? "",
+            revised_mark: reviewMarks[studentID] ?? 0,
+            comments: reviewComments[studentID] ?? "",
         };
-        console.log("📋 Revised mark saved:", result);
-        toast.success(
-            `Revised mark saved for ${studentID} — Mark: ${result.mark}, Comments: ${result.comments}`
-        );
 
-        if (currentIndex < needsReviewRows.length - 1) {
-            setCurrentIndex((prev) => prev + 1);
+        try {
+            setSaving(true);
+            // Adjust to your actual API method name/shape if different:
+            await API.markingResults.saveReview(payload);
+
+            toast.success(
+                `Revised mark saved for ${payload.zid} — Mark: ${payload.revised_mark}`
+            );
+
+            // advance to next item
+            if (currentIndex < needsReviewRows.length - 1) {
+                setCurrentIndex((prev) => prev + 1);
+            }
+        } catch (e) {
+            toast.error(e?.message || "Failed to save revised mark");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -204,11 +216,11 @@ function ReviewDashboard({ rows }) {
                                         <Typography variant="body1" color="text.secondary">Difference</Typography>
                                         <Typography
                                             variant="h4"
-                                            color={Math.abs(currentItem.difference) >= 5 ? "error.main" : "text.primary"}
+                                            color={Math.abs(currentItem.difference ?? 0) >= 5 ? "error.main" : "text.primary"}
                                             fontWeight="bold"
                                         >
-                                            {currentItem.difference > 0 ? "+" : ""}
-                                            {currentItem.difference}
+                                            {(currentItem.difference ?? 0) > 0 ? "+" : ""}
+                                            {currentItem.difference ?? 0}
                                         </Typography>
                                     </Box>
                                 </Stack>
@@ -217,7 +229,7 @@ function ReviewDashboard({ rows }) {
                             {/* Feedback */}
                             {!!currentItem.feedback && (
                                 <Paper variant="outlined" sx={{ p: 2 }}>
-                                    <Typography variant="h6" gutterBottom>AI Feedback</Typography>
+                                    <Typography variant="h6" gutterBottom>AI Marking Feedback</Typography>
                                     <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
                                         {currentItem.feedback}
                                     </Typography>
@@ -273,9 +285,10 @@ function ReviewDashboard({ rows }) {
                                     startIcon={<CheckCircleIcon />}
                                     onClick={() => handleDecision(currentItem.studentID)}
                                     size="large"
-                                    sx={{ minWidth: 160 }}
+                                    sx={{ minWidth: 200 }}
+                                    disabled={saving}
                                 >
-                                    Submit with revised mark
+                                    {saving ? "Saving..." : "Submit with revised mark"}
                                 </Button>
                             </Stack>
                         </Stack>
@@ -288,26 +301,23 @@ function ReviewDashboard({ rows }) {
 
 /** ─────────────────────────────────────────────────────────────────────────────
  * Airesult page
- * - Provides dummy/API rows with a toggle
- * - Passes chosen rows to dashboards and review component
+ * - Dummy paths removed; everything uses API data only
  * ────────────────────────────────────────────────────────────────────────────*/
 export default function Airesult() {
     const [searchParams] = useSearchParams();
     const courseId = searchParams.get("courseId");
     const [course, setCourse] = useState("");
     const [term, setTerm] = useState("");
-    const [dashboardOpen, setDashboardOpen] = useState("dashboard"); // "dashboard" | "review"
+    const [dashboardOpen, setDashboardOpen] = useState("dashboard");
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState("");
-    const [useDummy, setUseDummy] = useState(true); // ← toggle
 
     useEffect(() => {
         setCourse(searchParams.get("course") || "");
         setTerm(searchParams.get("term") || "");
     }, [searchParams]);
 
-    // Fetch API rows (unchanged)
     useEffect(() => {
         if (!courseId) {
             setFetchError("Missing course ID, please try again.");
@@ -343,7 +353,7 @@ export default function Airesult() {
                         diff = 0;
                     }
 
-                    const needsReview = item.needs_review === true; // API will send true or false
+                    const needsReview = item.needs_review === true;
                     const zid = item.zid ? String(item.zid) : `z${index + 1}`;
                     const studentIdValue = zid.replace(/^z/i, "") || zid;
 
@@ -360,6 +370,7 @@ export default function Airesult() {
                         needsReview,
                         reviewMark: item.review_mark ?? "",
                         reviewComments: item.review_comments ?? "",
+                        reviewStatus: item.review_status || "pending",
                     };
                 });
 
@@ -388,93 +399,18 @@ export default function Airesult() {
     const [selectedAssignment, setSelectedAssignment] = useState("all");
     const [selectedTutor, setSelectedTutor] = useState("all");
 
-    // Dummy dataset (single source for whole app when toggled)
-    const dummyRows = useMemo(
-        () => [
-            {
-                studentID: "z1234567",
-                zid: "z1234567",
-                studentName: "Alice Johnson",
-                markBy: "Tutor A",
-                assignment: "Assignment 1",
-                tutorMark: 75,
-                aiMark: 83,
-                feedback: "AI suggests boosting Q2 with clearer justification and examples.",
-                needsReview: true,
-                reviewMark: 78,
-                reviewComments: "Agreed with AI on Q2; partial credit added.",
-            },
-            {
-                studentID: "z7654321",
-                zid: "z7654321",
-                studentName: "Bob Smith",
-                markBy: "Tutor B",
-                assignment: "Assignment 2",
-                tutorMark: 68,
-                aiMark: 70,
-                feedback: "Minor deduction due to formatting issues.",
-                needsReview: false,
-                reviewMark: "",
-                reviewComments: "",
-            },
-            {
-                studentID: "z1111111",
-                zid: "z1111111",
-                studentName: "Charlie Nguyen",
-                markBy: "Tutor A",
-                assignment: "Assignment 1",
-                tutorMark: 59,
-                aiMark: 65,
-                feedback: "Insufficient depth in analysis; expand section 3.",
-                needsReview: true,
-                reviewMark: 62,
-                reviewComments: "Added marks for improved analysis.",
-            },
-            {
-                studentID: "z2222222",
-                zid: "z2222222",
-                studentName: "Dana Lee",
-                markBy: "Tutor C",
-                assignment: "Assignment 3",
-                tutorMark: 88,
-                aiMark: 98,
-                feedback: "Excellent; consider bonus for outstanding clarity.",
-                needsReview: true,
-                reviewMark: 92,
-                reviewComments: "Awarded bonus marks.",
-            },
-            {
-                studentID: "z3333333",
-                zid: "z3333333",
-                studentName: "Ethan Wang",
-                markBy: "Tutor B",
-                assignment: "Assignment 2",
-                tutorMark: 72,
-                aiMark: 72,
-                feedback: "Meets criteria.",
-                needsReview: false,
-                reviewMark: "",
-                reviewComments: "",
-            },
-        ],
-        []
-    );
-
+    // ⟵ UPDATED: derive purely from API rows
     const availableAssignments = useMemo(() => {
         const uniq = new Set();
-        (useDummy ? dummyRows : rows).forEach((r) => {
-            if (r.assignment) uniq.add(r.assignment);
-        });
+        rows.forEach((r) => r.assignment && uniq.add(r.assignment));
         return Array.from(uniq);
-    }, [rows, dummyRows, useDummy]);
+    }, [rows]);
 
     const availableTutors = useMemo(() => {
         const uniq = new Set();
-        (useDummy ? dummyRows : rows).forEach((r) => {
-            if (r.markBy) uniq.add(r.markBy);
-        });
+        rows.forEach((r) => r.markBy && uniq.add(r.markBy));
         return Array.from(uniq);
-    }, [rows, dummyRows, useDummy]);
+    }, [rows]);
 
     useEffect(() => {
         if (selectedAssignment !== "all" && !availableAssignments.includes(selectedAssignment)) {
@@ -488,29 +424,34 @@ export default function Airesult() {
         }
     }, [availableTutors, selectedTutor]);
 
-    // Filter rows (works for both API and dummy)
+    // ⟵ UPDATED: filter only from real rows
     const filteredRows = useMemo(() => {
-        const src = useDummy ? dummyRows : rows;
-        return src.filter(
+        return rows.filter(
             (r) =>
                 (selectedAssignment === "all" || r.assignment === selectedAssignment) &&
                 (selectedTutor === "all" || r.markBy === selectedTutor)
         );
-    }, [rows, dummyRows, selectedAssignment, selectedTutor, useDummy]);
+    }, [rows, selectedAssignment, selectedTutor]);
 
-    // Optionally materialize difference here (DataGrid can also compute via valueGetter)
+    // Keep difference consistent; if it already exists, keep it; else compute defensively
     const rowsForUI = useMemo(
         () =>
-            filteredRows.map((r) => ({
-                ...r,
-                difference: (r.aiMark ?? 0) - (r.tutorMark ?? 0),
-            })),
+            filteredRows.map((r) => {
+                if (typeof r.difference === "number") return r;
+                const ai = r.aiMark ?? null;
+                const tutor = r.tutorMark ?? null;
+                const diff =
+                    ai !== null && tutor !== null && !Number.isNaN(ai) && !Number.isNaN(tutor)
+                        ? Number((ai - tutor).toFixed(2))
+                        : 0;
+                return { ...r, difference: diff };
+            }),
         [filteredRows]
     );
 
     return (
         <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-            {/* ── Title bar (full width) ── */}
+            {/* ── Title bar ── */}
             <Box
                 sx={{
                     position: "sticky",
@@ -544,18 +485,7 @@ export default function Airesult() {
                 </Typography>
 
                 <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }} alignItems="center">
-                    {/* Dummy toggle */}
-                    <FormControlLabel
-                        control={
-                            <Switch
-                                checked={useDummy}
-                                onChange={(e) => setUseDummy(e.target.checked)}
-                                color="primary"
-                            />
-                        }
-                        label={useDummy ? "Dummy data: ON" : "Dummy data: OFF"}
-                        sx={{ mr: 1 }}
-                    />
+                    {/* ⟵ REMOVED: Dummy toggle */}
                     <Tooltip title="Back to Course Page" arrow>
                         <IconButton onClick={() => navigate("/courses", { replace: true })}>
                             <ArrowBackIcon sx={{ fontSize: 32 }} />
@@ -607,7 +537,7 @@ export default function Airesult() {
                             {fetchError}
                         </Alert>
                     )}
-                    {!loading && !fetchError && rows.length === 0 && !useDummy && (
+                    {!loading && !fetchError && rows.length === 0 && (
                         <Alert severity="info" sx={{ mb: 2 }}>
                             No results found
                         </Alert>
@@ -711,7 +641,7 @@ export default function Airesult() {
                             </Box>
                         </>
                     ) : dashboardOpen === "review" ? (
-                        <ReviewDashboard rows={rowsForUI} />
+                        <ReviewDashboard rows={rowsForUI} courseId={courseId} />
                     ) : (
                         <Typography variant="h4">Coming Soon...</Typography>
                     )}

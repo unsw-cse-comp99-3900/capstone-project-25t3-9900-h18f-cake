@@ -106,7 +106,6 @@ class MarkingIn(BaseModel):
     tutor_feedback: Optional[str] = None
     needs_review: Optional[bool] = None
     review_status: Optional[str] = None
-    review_mark: Optional[float] = None
     review_comments: Optional[str] = None
 
 
