@@ -259,17 +259,42 @@ def append_marking_result(
         except (TypeError, ValueError):
             return None
 
-    ai_value = to_float(payload.ai_total)
-    tutor_value = to_float(payload.tutor_total)
+    incoming = payload.dict(exclude_unset=True)
+    zid = str(incoming.get("zid") or payload.zid or "").strip()
+    if not zid:
+        raise HTTPException(status_code=400, detail="zid is required")
+
+    incoming["zid"] = zid
+    if "ai_total" in incoming:
+        incoming["ai_total"] = to_float(incoming["ai_total"])
+    if "tutor_total" in incoming:
+        incoming["tutor_total"] = to_float(incoming["tutor_total"])
+
+    existing_idx = None
+    for idx, rec in enumerate(data["marking_results"]):
+        if isinstance(rec, dict) and rec.get("zid") == zid:
+            existing_idx = idx
+            break
+
+    if existing_idx is not None:
+        record = {**data["marking_results"][existing_idx]}
+    else:
+        record = {"zid": zid, "created_at": _now_utc_iso()}
+
+    record.update({k: v for k, v in incoming.items() if k != "needs_review"})
+
+    ai_value = record.get("ai_total")
+    tutor_value = record.get("tutor_total")
     difference: Optional[float] = None
     if ai_value is not None and tutor_value is not None:
         difference = round(ai_value - tutor_value, 2)
+    record["difference"] = difference
 
-    record = payload.dict()
-
-    # needs_review rule
+    # needs_review rule (auto unless explicitly provided)
     if difference is not None and tutor_value not in (None, 0):
         record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
+    elif "needs_review" in incoming:
+        record["needs_review"] = bool(incoming["needs_review"])
     else:
         record["needs_review"] = bool(record.get("needs_review"))
 
@@ -278,17 +303,6 @@ def append_marking_result(
     record.setdefault("assignment", "")
     record.setdefault("student_name", "")
     record.setdefault("marked_by", "")
-
-    record.update(
-        {
-            "ai_total": ai_value,
-            "tutor_total": tutor_value,
-            "difference": difference,
-            "created_at": _now_utc_iso(),
-        }
-    )
-
-    record["zid"] = str(record.get("zid", "")).strip()
 
     # upsert by zid
     updated = False
