@@ -53,12 +53,17 @@ def _resolve_course(db: Session, submission: models.Submission) -> models.Course
 def _upsert_record(
     data: Dict[str, Any],
     zid: str,
+    assignment_id: int | None,
     payload: Dict[str, Any],
 ) -> Dict[str, Any]:
     updated = False
     record: Optional[Dict[str, Any]] = None
     for idx, item in enumerate(data["marking_results"]):
-        if isinstance(item, dict) and item.get("zid", "").lower() == zid:
+        if not isinstance(item, dict):
+            continue
+        same_zid = (item.get("zid", "").lower() == zid.lower())
+        same_aid = (item.get("assignment_id") == assignment_id)
+        if same_zid and (same_aid or item.get("assignment_id") is None):
             record = dict(item)
             record.update(payload)
             data["marking_results"][idx] = record
@@ -70,7 +75,6 @@ def _upsert_record(
         data["marking_results"].append(record)
 
     return record
-
 
 def sync_tutor_mark_from_file(
     db: Session,
@@ -96,7 +100,7 @@ def sync_tutor_mark_from_file(
     data["term"] = course.term or ""
 
     zid = (extracted.get("zid") or "").lower()
-
+    assignment_id: int | None = submission.assignment_id
     existing: Optional[Dict[str, Any]] = None
     for item in data["marking_results"]:
         if isinstance(item, dict) and item.get("zid", "").lower() == zid:
@@ -116,6 +120,7 @@ def sync_tutor_mark_from_file(
 
     payload = {
         "zid": zid,
+        "assignment_id": assignment_id, 
         "assignment": (existing or {}).get("assignment") or submission.assignment_name or "",
         "student_name": (existing or {}).get("student_name") or submission.student_id or "",
         "ai_marking_detail": (existing or {}).get("ai_marking_detail"),
@@ -132,7 +137,7 @@ def sync_tutor_mark_from_file(
         "created_at": _now_utc_iso(),
     }
 
-    record = _upsert_record(data, zid, payload)
+    record = _upsert_record(data, zid, assignment_id, payload)
 
     save_json_atomic(json_path, data)
     return record
@@ -209,6 +214,7 @@ def sync_ai_predictions_from_file(
 
         payload = {
             "zid": zid,
+            "assignment_id": assignment_id, 
             "assignment": (existing or {}).get("assignment") or assignment.title or "",
             "student_name": (existing or {}).get("student_name") or zid,
             "ai_marking_detail": detail or None,
@@ -225,7 +231,7 @@ def sync_ai_predictions_from_file(
             "created_at": _now_utc_iso(),
         }
 
-        record = _upsert_record(data, zid, payload)
+        record = _upsert_record(data, zid, assignment_id, payload)
         updated_records.append(record)
 
     save_json_atomic(json_path, data)
