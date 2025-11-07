@@ -16,7 +16,7 @@ router = APIRouter(prefix="/v1/marking_result", tags=["marking_result"])
 
 # ---------- Utils ----------
 _TERM_RX = re.compile(r"^\s*(\d{4})\s*(?:Term|T)?\s*([0-9]+)\s*$", re.IGNORECASE)
-_REVIEW_DIFF_THRESHOLD = 5.0  # TODO: move to config if needed
+_REVIEW_DIFF_THRESHOLD = 0.2  # TODO: move to config if needed
 
 
 def parse_term(term: str) -> Tuple[str, str]:
@@ -268,8 +268,8 @@ def append_marking_result(
     record = payload.dict()
 
     # needs_review rule
-    if difference is not None:
-        record["needs_review"] = abs(difference) >= _REVIEW_DIFF_THRESHOLD
+    if difference is not None and tutor_value not in (None, 0):
+        record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
     else:
         record["needs_review"] = bool(record.get("needs_review"))
 
