@@ -3,14 +3,14 @@ import {
     Box, Stack, IconButton, Typography,
     ToggleButton, ToggleButtonGroup,
     FormControl, InputLabel, Select, MenuItem, Tooltip,
-    Paper, Button, Chip, Alert, Card, CardContent, TextField
+    Paper, Button, Chip, Alert, Card, CardContent, TextField,
+    Switch, FormControlLabel
 } from "@mui/material";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import FlagIcon from "@mui/icons-material/Flag";
-import AddTaskIcon from '@mui/icons-material/AddTask';
+import AddTaskIcon from "@mui/icons-material/AddTask";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
 import API from "../api";
@@ -19,125 +19,73 @@ import DashboardStudent from "../component/dashboard-1-main";
 import DashboardTutorScatter from "../component/dashboard-2-tutor-scatter";
 import ExitConfirmPopup from "../component/exit-confirm";
 import Sidebar, { SIDEBAR_WIDTH } from "../component/sidebar";
+import { toast } from "sonner";
 
 const TOPBAR_HEIGHT = 72;
 
-// Review 
+/** ─────────────────────────────────────────────────────────────────────────────
+ * ReviewDashboard (component)
+ * - Stateless regarding data source; receives `rows` from parent
+ * - Approve-only flow; on submit it logs and toasts
+ * ────────────────────────────────────────────────────────────────────────────*/
 function ReviewDashboard({ rows }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [reviewComments, setReviewComments] = useState({});
-    const [decisions, setDecisions] = useState({});
     const [selectedAssignment, setSelectedAssignment] = useState("all");
+    const [reviewMarks, setReviewMarks] = useState({});
 
-    // Filter student assignments to review //disabled for frontend testing
-    // const needsReviewRows = useMemo(() => {
-    //     const filtered = rows.filter(row => 
-    //         row.needsReview || Math.abs(row.difference) >= 5
-    //     );
-
-    //     if (selectedAssignment !== "all") {
-    //         return filtered.filter(row => row.assignment === selectedAssignment);
-    //     }
-
-    //     return filtered;
-    // }, [rows, selectedAssignment]);
-    // --- Dummy data for testing ---
-    const dummyRows = [
-        {
-            id: 1,
-            studentID: "z1234567",
-            studentName: "Alice Johnson",
-            assignment: "Assignment 1",
-            needsReview: true,
-            tutormark: 80,
-            difference: 8,
-            originalMark: 75,
-            revisedMark: 83,
-        },
-        {
-            id: 2,
-            studentID: "z7654321",
-            studentName: "Bob Smith",
-            assignment: "Assignment 2",
-            needsReview: false,
-            difference: 2,
-            originalMark: 68,
-            revisedMark: 70,
-        },
-        {
-            id: 3,
-            studentID: "z1111111",
-            studentName: "Charlie Nguyen",
-            assignment: "Assignment 1",
-            needsReview: true,
-            difference: 6,
-            originalMark: 59,
-            revisedMark: 65,
-        },
-        {
-            id: 4,
-            studentID: "z2222222",
-            studentName: "Dana Lee",
-            assignment: "Assignment 3",
-            needsReview: false,
-            difference: 10,
-            originalMark: 88,
-            revisedMark: 98,
-        },
-        {
-            id: 5,
-            studentID: "z3333333",
-            studentName: "Ethan Wang",
-            assignment: "Assignment 2",
-            needsReview: false,
-            difference: 0,
-            originalMark: 72,
-            revisedMark: 72,
-        },
-    ];
-
-    const needsReviewRows = dummyRows;
+    // Filter items that need review
+    const needsReviewRows = useMemo(() => {
+        const filtered = rows.filter(
+            (row) => row.needsReview || Math.abs(row.difference ?? 0) >= 5
+        );
+        return selectedAssignment === "all"
+            ? filtered
+            : filtered.filter((row) => row.assignment === selectedAssignment);
+    }, [rows, selectedAssignment]);
 
     const currentItem = needsReviewRows[currentIndex];
 
-    const assignments = useMemo(() =>
-        [...new Set(rows.map(item => item.assignment))],
-        [rows]);
+    // Assignment list
+    const assignments = useMemo(
+        () => [...new Set(rows.map((item) => item.assignment))],
+        [rows]
+    );
 
-    const handleDecision = (studentID, decision) => {
-        setDecisions(prev => ({
-            ...prev,
-            [studentID]: {
-                decision,
-                comments: reviewComments[studentID] || "",
-                timestamp: new Date().toLocaleString()
-            }
-        }));
+    const handleDecision = (studentID) => {
+        const result = {
+            studentID,
+            decision: "approved", // single flow
+            mark: reviewMarks[studentID] || 0,
+            comments: reviewComments[studentID] || "",
+            timestamp: new Date().toLocaleString(),
+        };
+        console.log("📋 Revised mark saved:", result);
+        toast.success(
+            `Revised mark saved for ${studentID} — Mark: ${result.mark}, Comments: ${result.comments}`
+        );
 
-        // 自动跳到下一个
         if (currentIndex < needsReviewRows.length - 1) {
-            setCurrentIndex(prev => prev + 1);
+            setCurrentIndex((prev) => prev + 1);
         }
     };
 
-    const [reviewMarks, setReviewMarks] = useState({});
-
     const handleMarkChange = (studentID, revisedMark) => {
-        setReviewMarks(prev => ({ ...prev, [studentID]: revisedMark }));
-    };
-    const handleCommentChange = (studentID, comment) => {
-        setReviewComments(prev => ({
-            ...prev,
-            [studentID]: comment
-        }));
+        const n = revisedMark === "" ? "" : Number(revisedMark);
+        const clamped =
+            revisedMark === "" || Number.isNaN(n) ? "" : Math.max(0, Math.min(100, n));
+        setReviewMarks((prev) => ({ ...prev, [studentID]: clamped }));
     };
 
+    const handleCommentChange = (studentID, comment) => {
+        setReviewComments((prev) => ({ ...prev, [studentID]: comment }));
+    };
 
     const getStatusChip = (status) => {
         const statusConfig = {
             pending: { color: "warning", label: "Needs Review" },
             approved: { color: "success", label: "Approved" },
-            rejected: { color: "error", label: "Rejected" }
+            rejected: { color: "error", label: "Rejected" },
         };
         const config = statusConfig[status] || statusConfig.pending;
         return <Chip label={config.label} color={config.color} size="small" />;
@@ -153,7 +101,7 @@ function ReviewDashboard({ rows }) {
 
     return (
         <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
-            {/* Review Header */}
+            {/* Header */}
             <Paper sx={{ p: 2, bgcolor: "primary.main", color: "white" }}>
                 <Typography variant="h6" gutterBottom>
                     Marking Review & Reconciliation
@@ -164,7 +112,7 @@ function ReviewDashboard({ rows }) {
             </Paper>
 
             {/* Filters */}
-            <Paper sx={{ p: 2}}>
+            <Paper sx={{ p: 2 }}>
                 <Stack direction="row" spacing={2} alignItems="center">
                     <FormControl size="small" sx={{ minWidth: 200 }}>
                         <InputLabel>Filter by Assignment</InputLabel>
@@ -193,7 +141,7 @@ function ReviewDashboard({ rows }) {
                 </Stack>
             </Paper>
 
-            {/* Review Progress */}
+            {/* Progress */}
             <Paper sx={{ p: 2, mb: 2, bgcolor: "grey.100" }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="h6">
@@ -209,13 +157,13 @@ function ReviewDashboard({ rows }) {
                             height: "100%",
                             bgcolor: "success.main",
                             width: `${((currentIndex + 1) / needsReviewRows.length) * 100}%`,
-                            transition: "width 0.3s ease"
+                            transition: "width 0.3s ease",
                         }}
                     />
                 </Box>
             </Paper>
 
-            {/* Current Item for Review */}
+            {/* Current item */}
             {currentItem && (
                 <Card sx={{ mb: 2, flexGrow: 1, overflowY: "auto" }}>
                     <CardContent sx={{ p: 3 }}>
@@ -227,15 +175,15 @@ function ReviewDashboard({ rows }) {
                                         {currentItem.studentName} ({currentItem.zid || `z${currentItem.studentID}`})
                                     </Typography>
                                     <Typography variant="h6" color="text.secondary">
-                                        {currentItem.assignment} • Marked by: {currentItem.markBy}
+                                        {currentItem.assignment} • Marked by: {currentItem.markBy ?? "Unknown"}
                                     </Typography>
                                 </Box>
                                 {getStatusChip(currentItem.reviewStatus)}
                             </Box>
 
                             {/* Marks Comparison */}
-                            <Paper variant="outlined" sx={{ p: 3, bgcolor: "grey.50"}}>
-                                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1}}>
+                            <Paper variant="outlined" sx={{ p: 3, bgcolor: "grey.50" }}>
+                                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                     <FlagIcon color="warning" />
                                     Marks Comparison
                                 </Typography>
@@ -259,14 +207,15 @@ function ReviewDashboard({ rows }) {
                                             color={Math.abs(currentItem.difference) >= 5 ? "error.main" : "text.primary"}
                                             fontWeight="bold"
                                         >
-                                            {currentItem.difference > 0 ? '+' : ''}{currentItem.difference}
+                                            {currentItem.difference > 0 ? "+" : ""}
+                                            {currentItem.difference}
                                         </Typography>
                                     </Box>
                                 </Stack>
                             </Paper>
 
                             {/* Feedback */}
-                            {currentItem.feedback && (
+                            {!!currentItem.feedback && (
                                 <Paper variant="outlined" sx={{ p: 2 }}>
                                     <Typography variant="h6" gutterBottom>AI Feedback</Typography>
                                     <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
@@ -275,12 +224,8 @@ function ReviewDashboard({ rows }) {
                                 </Paper>
                             )}
 
-                            {/* Review Comments */}
-                            <Paper variant="outlined" 
-                            sx={{ 
-                                p: 2, 
-                                bgcolor: "grey.50",
-                                }}>
+                            {/* Review */}
+                            <Paper variant="outlined" sx={{ p: 2, bgcolor: "grey.50" }}>
                                 <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                     <AddTaskIcon color="warning" />
                                     Review
@@ -291,10 +236,10 @@ function ReviewDashboard({ rows }) {
                                         display: "flex",
                                         gap: 2,
                                         alignItems: "stretch",
-                                        flexDirection: { xs: "column", sm: "row" }, // stack on mobile, side-by-side on sm+
+                                        flexDirection: { xs: "column", sm: "row" },
                                     }}
                                 >
-                                    {/* Left: Marks box */}
+                                    {/* Left: Revised mark */}
                                     <TextField
                                         label="Revised Marks"
                                         type="number"
@@ -302,21 +247,17 @@ function ReviewDashboard({ rows }) {
                                         onChange={(e) => handleMarkChange(currentItem.studentID, e.target.value)}
                                         variant="outlined"
                                         inputProps={{ min: 0, max: 100, step: 1 }}
-                                        sx={{
-                                            width: { xs: "100%", sm: 180 }, // fixed width on desktop, full on mobile
-                                        }}
+                                        sx={{ width: { xs: "100%", sm: 180 } }}
                                         helperText="0-100"
                                     />
 
-                                    {/* Right: Comment area */}
+                                    {/* Right: Comments */}
                                     <TextField
                                         label="Your Review Comments"
                                         multiline
                                         rows={4}
                                         value={reviewComments[currentItem.studentID] ?? ""}
-                                        onChange={(e) =>
-                                            handleCommentChange(currentItem.studentID, e.target.value)
-                                        }
+                                        onChange={(e) => handleCommentChange(currentItem.studentID, e.target.value)}
                                         placeholder="Provide your assessment of the marking discrepancy and any additional comments..."
                                         fullWidth
                                         variant="outlined"
@@ -324,70 +265,19 @@ function ReviewDashboard({ rows }) {
                                 </Box>
                             </Paper>
 
-                            {/* Action Buttons */}
+                            {/* Actions */}
                             <Stack direction="row" spacing={2} justifyContent="flex-end">
-                                <Button
-                                    variant="outlined"
-                                    color="error"
-                                    startIcon={<CancelIcon />}
-                                    onClick={() => handleDecision(currentItem.studentID, "rejected")}
-                                    size="large"
-                                    sx={{ minWidth: 140 }}
-                                >
-                                    Reject Marks
-                                </Button>
                                 <Button
                                     variant="contained"
                                     color="success"
                                     startIcon={<CheckCircleIcon />}
-                                    onClick={() => handleDecision(currentItem.studentID, "approved")}
+                                    onClick={() => handleDecision(currentItem.studentID)}
                                     size="large"
-                                    sx={{ minWidth: 140 }}
+                                    sx={{ minWidth: 160 }}
                                 >
-                                    Approve Marks
+                                    Submit with revised mark
                                 </Button>
                             </Stack>
-                        </Stack>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Review Summary */}
-            {Object.keys(decisions).length > 0 && (
-                <Card>
-                    <CardContent>
-                        <Typography variant="h6" gutterBottom>Review Summary</Typography>
-                        <Stack spacing={2}>
-                            {Object.entries(decisions).map(([studentID, decisionData]) => {
-                                const item = rows.find((r) => String(r.studentID) === studentID);
-                                return item ? (
-                                    <Paper key={studentID} variant="outlined" sx={{ p: 2 }}>
-                                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                                            <Box>
-                                                <Typography variant="subtitle1" fontWeight="bold">
-                                                    {item.zid || `z${item.studentID}`} - {item.assignment}
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    {item.studentName} • {item.markBy}
-                                                </Typography>
-                                                {decisionData.comments && (
-                                                    <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                                                        Comments: {decisionData.comments}
-                                                    </Typography>
-                                                )}
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Reviewed: {decisionData.timestamp}
-                                                </Typography>
-                                            </Box>
-                                            <Chip
-                                                label={decisionData.decision === "approved" ? "Approved" : "Rejected"}
-                                                color={decisionData.decision === "approved" ? "success" : "error"}
-                                                size="medium"
-                                            />
-                                        </Stack>
-                                    </Paper>
-                                ) : null;
-                            })}
                         </Stack>
                     </CardContent>
                 </Card>
@@ -396,21 +286,28 @@ function ReviewDashboard({ rows }) {
     );
 }
 
+/** ─────────────────────────────────────────────────────────────────────────────
+ * Airesult page
+ * - Provides dummy/API rows with a toggle
+ * - Passes chosen rows to dashboards and review component
+ * ────────────────────────────────────────────────────────────────────────────*/
 export default function Airesult() {
     const [searchParams] = useSearchParams();
     const courseId = searchParams.get("courseId");
     const [course, setCourse] = useState("");
     const [term, setTerm] = useState("");
-    const [dashboardOpen, setDashboardOpen] = useState("dashboard"); // "dashboard" or "review"
+    const [dashboardOpen, setDashboardOpen] = useState("dashboard"); // "dashboard" | "review"
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState("");
+    const [useDummy, setUseDummy] = useState(true); // ← toggle
 
     useEffect(() => {
         setCourse(searchParams.get("course") || "");
         setTerm(searchParams.get("term") || "");
     }, [searchParams]);
 
+    // Fetch API rows (unchanged)
     useEffect(() => {
         if (!courseId) {
             setFetchError("Missing course ID, please try again.");
@@ -446,11 +343,7 @@ export default function Airesult() {
                         diff = 0;
                     }
 
-                    const needsReview =
-                        item.needs_review !== undefined && item.needs_review !== null
-                            ? item.needs_review
-                            : Math.abs(diff ?? 0) >= 5;
-
+                    const needsReview = item.needs_review === true; // API will send true or false
                     const zid = item.zid ? String(item.zid) : `z${index + 1}`;
                     const studentIdValue = zid.replace(/^z/i, "") || zid;
 
@@ -465,8 +358,8 @@ export default function Airesult() {
                         feedback: item.ai_feedback || item.feedback || "",
                         assignment: item.assignment || "Unassigned",
                         needsReview,
-                        reviewStatus: item.review_status || "pending",
-                        reviewComments: item.review_comments || "",
+                        reviewMark: item.review_mark ?? "",
+                        reviewComments: item.review_comments ?? "",
                     };
                 });
 
@@ -495,21 +388,93 @@ export default function Airesult() {
     const [selectedAssignment, setSelectedAssignment] = useState("all");
     const [selectedTutor, setSelectedTutor] = useState("all");
 
+    // Dummy dataset (single source for whole app when toggled)
+    const dummyRows = useMemo(
+        () => [
+            {
+                studentID: "z1234567",
+                zid: "z1234567",
+                studentName: "Alice Johnson",
+                markBy: "Tutor A",
+                assignment: "Assignment 1",
+                tutorMark: 75,
+                aiMark: 83,
+                feedback: "AI suggests boosting Q2 with clearer justification and examples.",
+                needsReview: true,
+                reviewMark: 78,
+                reviewComments: "Agreed with AI on Q2; partial credit added.",
+            },
+            {
+                studentID: "z7654321",
+                zid: "z7654321",
+                studentName: "Bob Smith",
+                markBy: "Tutor B",
+                assignment: "Assignment 2",
+                tutorMark: 68,
+                aiMark: 70,
+                feedback: "Minor deduction due to formatting issues.",
+                needsReview: false,
+                reviewMark: "",
+                reviewComments: "",
+            },
+            {
+                studentID: "z1111111",
+                zid: "z1111111",
+                studentName: "Charlie Nguyen",
+                markBy: "Tutor A",
+                assignment: "Assignment 1",
+                tutorMark: 59,
+                aiMark: 65,
+                feedback: "Insufficient depth in analysis; expand section 3.",
+                needsReview: true,
+                reviewMark: 62,
+                reviewComments: "Added marks for improved analysis.",
+            },
+            {
+                studentID: "z2222222",
+                zid: "z2222222",
+                studentName: "Dana Lee",
+                markBy: "Tutor C",
+                assignment: "Assignment 3",
+                tutorMark: 88,
+                aiMark: 98,
+                feedback: "Excellent; consider bonus for outstanding clarity.",
+                needsReview: true,
+                reviewMark: 92,
+                reviewComments: "Awarded bonus marks.",
+            },
+            {
+                studentID: "z3333333",
+                zid: "z3333333",
+                studentName: "Ethan Wang",
+                markBy: "Tutor B",
+                assignment: "Assignment 2",
+                tutorMark: 72,
+                aiMark: 72,
+                feedback: "Meets criteria.",
+                needsReview: false,
+                reviewMark: "",
+                reviewComments: "",
+            },
+        ],
+        []
+    );
+
     const availableAssignments = useMemo(() => {
         const uniq = new Set();
-        rows.forEach((r) => {
+        (useDummy ? dummyRows : rows).forEach((r) => {
             if (r.assignment) uniq.add(r.assignment);
         });
         return Array.from(uniq);
-    }, [rows]);
+    }, [rows, dummyRows, useDummy]);
 
     const availableTutors = useMemo(() => {
         const uniq = new Set();
-        rows.forEach((r) => {
+        (useDummy ? dummyRows : rows).forEach((r) => {
             if (r.markBy) uniq.add(r.markBy);
         });
         return Array.from(uniq);
-    }, [rows]);
+    }, [rows, dummyRows, useDummy]);
 
     useEffect(() => {
         if (selectedAssignment !== "all" && !availableAssignments.includes(selectedAssignment)) {
@@ -523,14 +488,24 @@ export default function Airesult() {
         }
     }, [availableTutors, selectedTutor]);
 
-    const filteredRows = useMemo(
+    // Filter rows (works for both API and dummy)
+    const filteredRows = useMemo(() => {
+        const src = useDummy ? dummyRows : rows;
+        return src.filter(
+            (r) =>
+                (selectedAssignment === "all" || r.assignment === selectedAssignment) &&
+                (selectedTutor === "all" || r.markBy === selectedTutor)
+        );
+    }, [rows, dummyRows, selectedAssignment, selectedTutor, useDummy]);
+
+    // Optionally materialize difference here (DataGrid can also compute via valueGetter)
+    const rowsForUI = useMemo(
         () =>
-            rows.filter(
-                (r) =>
-                    (selectedAssignment === "all" || r.assignment === selectedAssignment) &&
-                    (selectedTutor === "all" || r.markBy === selectedTutor)
-            ),
-        [rows, selectedAssignment, selectedTutor]
+            filteredRows.map((r) => ({
+                ...r,
+                difference: (r.aiMark ?? 0) - (r.tutorMark ?? 0),
+            })),
+        [filteredRows]
     );
 
     return (
@@ -568,7 +543,19 @@ export default function Airesult() {
                     {course} {term}
                 </Typography>
 
-                <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+                <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }} alignItems="center">
+                    {/* Dummy toggle */}
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={useDummy}
+                                onChange={(e) => setUseDummy(e.target.checked)}
+                                color="primary"
+                            />
+                        }
+                        label={useDummy ? "Dummy data: ON" : "Dummy data: OFF"}
+                        sx={{ mr: 1 }}
+                    />
                     <Tooltip title="Back to Course Page" arrow>
                         <IconButton onClick={() => navigate("/courses", { replace: true })}>
                             <ArrowBackIcon sx={{ fontSize: 32 }} />
@@ -598,10 +585,8 @@ export default function Airesult() {
                         pt: 4,
                         px: 4,
                         maxWidth: "90vw",
-                        // mx: "auto",
-                        overflowY: "auto", 
+                        overflowY: "auto",
                         scrollBehavior: "smooth",
-                        // maxHeight: "90vh",
                         mx: "auto",
                     }}
                 >
@@ -614,7 +599,7 @@ export default function Airesult() {
 
                     {loading && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            正在加载AI评分结果...
+                            Loading AI results...
                         </Alert>
                     )}
                     {fetchError && (
@@ -622,9 +607,9 @@ export default function Airesult() {
                             {fetchError}
                         </Alert>
                     )}
-                    {!loading && !fetchError && rows.length === 0 && (
+                    {!loading && !fetchError && rows.length === 0 && !useDummy && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            暂无评分记录。
+                            No results found
                         </Alert>
                     )}
 
@@ -653,7 +638,9 @@ export default function Airesult() {
                                         >
                                             <MenuItem value="all">All assignments</MenuItem>
                                             {availableAssignments.map((a) => (
-                                                <MenuItem key={a} value={a}>{a}</MenuItem>
+                                                <MenuItem key={a} value={a}>
+                                                    {a}
+                                                </MenuItem>
                                             ))}
                                         </Select>
                                     </FormControl>
@@ -668,7 +655,9 @@ export default function Airesult() {
                                         >
                                             <MenuItem value="all">All tutors</MenuItem>
                                             {availableTutors.map((t) => (
-                                                <MenuItem key={t} value={t}>{t}</MenuItem>
+                                                <MenuItem key={t} value={t}>
+                                                    {t}
+                                                </MenuItem>
                                             ))}
                                         </Select>
                                     </FormControl>
@@ -678,7 +667,9 @@ export default function Airesult() {
                                         exclusive
                                         value={variant}
                                         aria-label="dashboard view"
-                                        onChange={(_, v) => { if (v) setVariant(v); }}
+                                        onChange={(_, v) => {
+                                            if (v) setVariant(v);
+                                        }}
                                     >
                                         <ToggleButton value="studentView" aria-label="student view" type="button">
                                             Main
@@ -693,19 +684,34 @@ export default function Airesult() {
                             {/* Content area */}
                             <Box sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}>
                                 {variant === "studentView" ? (
-                                    <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", overflowY: "auto" }}>
-                                        <DashboardStudent variant="studentView" rows={filteredRows} />
+                                    <Box
+                                        sx={{
+                                            width: "100%",
+                                            height: "100%",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            overflowY: "auto",
+                                        }}
+                                    >
+                                        <DashboardStudent variant="studentView" rows={rowsForUI} />
                                     </Box>
                                 ) : (
-                                    <Box sx={{ width: "100%", height: "80%", display: "flex", flexDirection: "column", overflowY: "auto" }}>
-                                        <DashboardTutorScatter variant="tutorView" rows={filteredRows} />
+                                    <Box
+                                        sx={{
+                                            width: "100%",
+                                            height: "80%",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            overflowY: "auto",
+                                        }}
+                                    >
+                                        <DashboardTutorScatter variant="tutorView" rows={rowsForUI} />
                                     </Box>
                                 )}
                             </Box>
                         </>
                     ) : dashboardOpen === "review" ? (
-                        // Review Dashboard
-                        <ReviewDashboard rows={filteredRows} />
+                        <ReviewDashboard rows={rowsForUI} />
                     ) : (
                         <Typography variant="h4">Coming Soon...</Typography>
                     )}
