@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any, Optional, Dict, List, Tuple
 import json, datetime, re
 from fastapi import UploadFile, File
@@ -104,10 +104,13 @@ class MarkingIn(BaseModel):
     third_person_review_mark: Optional[float] = None
     ai_feedback: Optional[str] = None
     tutor_feedback: Optional[str] = None
-    needs_review: Optional[bool] = None
+    needs_review: Optional[bool] = Field(default=None, alias="needsReview")
     review_status: Optional[str] = None
     review_mark: Optional[float] = None
     review_comments: Optional[str] = None
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 class MarkingOut(MarkingIn):
@@ -291,10 +294,10 @@ def append_marking_result(
     record["difference"] = difference
 
     # needs_review rule (auto unless explicitly provided)
-    if difference is not None and tutor_value not in (None, 0):
-        record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
-    elif "needs_review" in incoming:
+    if "needs_review" in incoming:
         record["needs_review"] = bool(incoming["needs_review"])
+    elif difference is not None and tutor_value not in (None, 0):
+        record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
     else:
         record["needs_review"] = bool(record.get("needs_review"))
 
