@@ -143,11 +143,6 @@ export default function CoursesPage() {
             toast.error("Missing course identifier.");
             return;
         }
-<<<<<<< HEAD
-        // temporary disabled for front end testing
-=======
-
->>>>>>> 49d6ee9 (Back end  - AI integration)
         // try {
         //     const status = await API.markingResults.status(c._id);
         //     if (!status?.ai_completed) {
