@@ -63,7 +63,7 @@ def _upsert_record(
             continue
         same_zid = (item.get("zid", "").lower() == zid.lower())
         same_aid = (item.get("assignment_id") == assignment_id)
-        if same_zid and (same_aid or item.get("assignment_id") is None):
+        if same_zid and same_aid:
             record = dict(item)
             record.update(payload)
             data["marking_results"][idx] = record
@@ -103,7 +103,9 @@ def sync_tutor_mark_from_file(
     assignment_id: int | None = submission.assignment_id
     existing: Optional[Dict[str, Any]] = None
     for item in data["marking_results"]:
-        if isinstance(item, dict) and item.get("zid", "").lower() == zid:
+        if not isinstance(item, dict):
+            continue
+        if item.get("zid", "").lower() == zid and item.get("assignment_id") == assignment_id:
             existing = item
             break
 
@@ -197,11 +199,15 @@ def sync_ai_predictions_from_file(
 
         ai_feedback = "\n".join(feedback_parts) if feedback_parts else None
 
-        existing: Optional[Dict[str, Any]] = None
-        for r in data["marking_results"]:
-            if isinstance(r, dict) and r.get("zid", "").lower() == zid:
-                existing = r
-                break
+        existing: Optional[Dict[str, Any]] = next(
+            (
+                r for r in data["marking_results"]
+                if isinstance(r, dict)
+                and str(r.get("zid", "")).lower() == zid
+                and r.get("assignment_id") == assignment_id
+            ),
+            None,
+        )
 
         tutor_total = _to_float((existing or {}).get("tutor_total"))
         difference: Optional[float] = None
