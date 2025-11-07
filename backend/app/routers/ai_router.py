@@ -12,9 +12,9 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models import Assignment
 from ..services.marking_sync import sync_ai_predictions_from_file
-
+from ..services.ai_job_queue import status_to_dict
+from ..utils.jobq import get_jobq
 router = APIRouter(prefix="/v1/ai", tags=["ai"])
-
 # Put the repo root on sys.path (…/backend/app/routers -> parents[3] = repo root)
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
