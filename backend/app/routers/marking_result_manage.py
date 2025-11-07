@@ -305,10 +305,3 @@ def append_marking_result(
 
 
 
-
-
-
-
-
-
-# Update AI marking for the course
