@@ -36,6 +36,8 @@ class TeacherReportGenerator:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
         
+
+        
     def score_extraction(self,file_path):
         loader = DataLoader()
         text_raw = loader.load_file(file_path,None)
@@ -54,6 +56,8 @@ class TeacherReportGenerator:
             scores[self.rubric_details[str(idx)]] = score[0]
         # print(scores)
         return scores
+    
+
     def assign_extraction(self,file_path):
         loader = DataLoader()
         image_dir = os.path.join(self.results_dir, "images")
