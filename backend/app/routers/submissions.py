@@ -12,7 +12,8 @@ from ..utils.submission_status import compute_status
 from ..utils.file_utils import save_meta_json
 from ..utils.path_utils import assignment_dir, student_dir
 from ..services.marking_sync import sync_tutor_mark_from_file
-from ..services.ai_runner import run_ai_marking_pipeline
+from ..utils.jobq import get_jobq
+
 
 router = APIRouter(prefix="/v1/submissions", tags=["submissions"])
 
@@ -253,8 +254,6 @@ async def create_submission(
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Failed to sync tutor mark: {exc}")
 
-    if assignmentId and ai_assignment_paths:
-        background.add_task(run_ai_marking_pipeline, assignmentId)
 
     base_assignment: Path = assignment_dir(course, term or "", assignmentName, assignmentId or 0)
     sid_for_meta = (studentId or sub.student_id or f"unknown-{sub.id}").lower()
@@ -277,6 +276,9 @@ async def create_submission(
 
     db.commit()
     db.refresh(sub)
+    if assignmentId and ai_assignment_paths:
+      enq = get_jobq().enqueue(assignmentId)
+      print(f"[AI][API] enqueue from create_submission: assignment_id={assignmentId}, files={len(ai_assignment_paths)}, enqueued={enq}")
     return sub
 
 

@@ -94,6 +94,7 @@ def save_json_atomic(path: Path, data: Dict[str, Any]) -> None:
 class MarkingIn(BaseModel):
     zid: str
     student_name: Optional[str] = None
+    assignment_id: Optional[int] = None 
     assignment: Optional[str] = None
     ai_marking_detail: Optional[Dict[str, Any]] = None
     tutor_marking_detail: Optional[Dict[str, Any]] = None
@@ -235,36 +236,17 @@ def append_marking_result(
     course_id: int,
     payload: MarkingIn,
     db: Session = Depends(get_db),
-    # me: UserClaims = Depends(get_current_user),  # Enable if needed
 ):
     c = db.get(models.Course, course_id)
     if not c:
         raise HTTPException(status_code=404, detail="Course not found")
-    # if c.owner_id != int(me.sub):
-    #     raise HTTPException(status_code=403, detail="Forbidden")
 
-    try:
-        json_path = course_json_path_by_course(c)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
+    json_path = course_json_path_by_course(c)
     data = load_json(json_path)
     data["course"] = c.code
     data["name"] = c.name or ""
     data["term"] = c.term or ""
-
-    def to_float(value: Optional[float]) -> Optional[float]:
-        try:
-            return float(value) if value is not None else None
-        except (TypeError, ValueError):
-            return None
-
-    ai_value = to_float(payload.ai_total)
-    tutor_value = to_float(payload.tutor_total)
-    difference: Optional[float] = None
-    if ai_value is not None and tutor_value is not None:
-        difference = round(ai_value - tutor_value, 2)
-
+    def to_float(v): ...
     record = payload.dict()
 
     # needs_review rule
@@ -279,26 +261,37 @@ def append_marking_result(
     record.setdefault("student_name", "")
     record.setdefault("marked_by", "")
 
-    record.update(
-        {
-            "ai_total": ai_value,
-            "tutor_total": tutor_value,
-            "difference": difference,
-            "created_at": _now_utc_iso(),
-        }
-    )
+    now = _now_utc_iso()
+    record.setdefault("created_at", now)
+    record["updated_at"] = now
+    # ---------------------------------------------
+    zid = record["zid"].lower()
+    aid = record.get("assignment_id")
 
-    record["zid"] = str(record.get("zid", "")).strip()
-
-    # upsert by zid
     updated = False
     for i, r in enumerate(data["marking_results"]):
-        if isinstance(r, dict) and r.get("zid") == record["zid"]:
+        if not isinstance(r, dict):
+            continue
+        same_zid = (str(r.get("zid", "")).lower() == zid)
+        same_aid = (r.get("assignment_id") == aid)
+        if same_zid and (same_aid or r.get("assignment_id") is None):
+            if "created_at" in r: 
+                record["created_at"] = r["created_at"]
             data["marking_results"][i] = record
             updated = True
             break
+
     if not updated:
         data["marking_results"].append(record)
 
     save_json_atomic(json_path, data)
     return MarkingOut(**record)
+
+
+
+
+
+
+
+
+# Update AI marking for the course
