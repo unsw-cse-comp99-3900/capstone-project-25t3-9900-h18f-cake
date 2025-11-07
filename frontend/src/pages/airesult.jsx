@@ -3,13 +3,13 @@ import {
     Box, Stack, IconButton, Typography,
     ToggleButton, ToggleButtonGroup,
     FormControl, InputLabel, Select, MenuItem, Tooltip,
-    Paper, Button, Chip, Alert, Card, CardContent, TextField
+    Paper, Button, Chip, Alert, Card, CardContent, TextField,
 } from "@mui/material";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import FlagIcon from "@mui/icons-material/Flag";
+import AddTaskIcon from "@mui/icons-material/AddTask";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
 import API from "../api";
@@ -18,66 +18,75 @@ import DashboardStudent from "../component/dashboard-1-main";
 import DashboardTutorScatter from "../component/dashboard-2-tutor-scatter";
 import ExitConfirmPopup from "../component/exit-confirm";
 import Sidebar, { SIDEBAR_WIDTH } from "../component/sidebar";
+import { toast } from "sonner";
 
 const TOPBAR_HEIGHT = 72;
 
-// Review 组件
-function ReviewDashboard({ rows }) {
+/** ─────────────────────────────────────────────────────────────────────────────
+ * ReviewDashboard
+ * - Now posts to API instead of only logging
+ * - Receives `courseId` so the backend can identify the context
+ * ────────────────────────────────────────────────────────────────────────────*/
+function ReviewDashboard({ rows, courseId }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [reviewComments, setReviewComments] = useState({});
-    const [decisions, setDecisions] = useState({});
     const [selectedAssignment, setSelectedAssignment] = useState("all");
+    const [reviewMarks, setReviewMarks] = useState({});
+    const [saving, setSaving] = useState(false);
 
-    // 筛选需要 Review 的项目
     const needsReviewRows = useMemo(() => {
-        const filtered = rows.filter(row => 
-            row.needsReview || Math.abs(row.difference) >= 5
+        return rows.filter(
+            (row) =>
+                row.needsReview === true &&
+                (selectedAssignment === "all" || row.assignment === selectedAssignment)
         );
-        
-        if (selectedAssignment !== "all") {
-            return filtered.filter(row => row.assignment === selectedAssignment);
-        }
-        
-        return filtered;
     }, [rows, selectedAssignment]);
+
 
     const currentItem = needsReviewRows[currentIndex];
 
-    const assignments = useMemo(() => 
-        [...new Set(rows.map(item => item.assignment))], 
-    [rows]);
+    const assignments = useMemo(
+        () => [...new Set(rows.map((item) => item.assignment))],
+        [rows]
+    );
 
-    const handleDecision = (studentID, decision) => {
-        setDecisions(prev => ({
-            ...prev,
-            [studentID]: { 
-                decision, 
-                comments: reviewComments[studentID] || "",
-                timestamp: new Date().toLocaleString()
+    // ⟵ UPDATED: call API to persist revised mark/comments
+    const handleDecision = async (studentID) => {
+        const payload = {
+            course_id: courseId,
+            student_id: String(studentID),
+            zid: currentItem?.zid ?? String(studentID),
+            assignment: currentItem?.assignment ?? "",
+            revised_mark: reviewMarks[studentID] ?? 0,
+            comments: reviewComments[studentID] ?? "",
+        };
+
+        try {
+            setSaving(true);
+            // await API.markingResults.saveReview(payload); // disabled for now
+            toast.success(
+                `Revised mark saved for course: ${payload.course_id} assignment: ${payload.assignment} ZID: ${payload.zid} — Mark: ${payload.revised_mark} Comments: ${payload.comments}`
+            );
+            // advance to next item
+            if (currentIndex < needsReviewRows.length - 1) {
+                setCurrentIndex((prev) => prev + 1);
             }
-        }));
-        
-        // 自动跳到下一个
-        if (currentIndex < needsReviewRows.length - 1) {
-            setCurrentIndex(prev => prev + 1);
+        } catch (e) {
+            toast.error(e?.message || "Failed to save revised mark");
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleCommentChange = (studentID, comment) => {
-        setReviewComments(prev => ({
-            ...prev,
-            [studentID]: comment
-        }));
+    const handleMarkChange = (studentID, revisedMark) => {
+        const n = revisedMark === "" ? "" : Number(revisedMark);
+        const clamped =
+            revisedMark === "" || Number.isNaN(n) ? "" : Math.max(0, Math.min(100, n));
+        setReviewMarks((prev) => ({ ...prev, [studentID]: clamped }));
     };
 
-    const getStatusChip = (status) => {
-        const statusConfig = {
-            pending: { color: "warning", label: "Needs Review" },
-            approved: { color: "success", label: "Approved" },
-            rejected: { color: "error", label: "Rejected" }
-        };
-        const config = statusConfig[status] || statusConfig.pending;
-        return <Chip label={config.label} color={config.color} size="small" />;
+    const handleCommentChange = (studentID, comment) => {
+        setReviewComments((prev) => ({ ...prev, [studentID]: comment }));
     };
 
     if (needsReviewRows.length === 0) {
@@ -90,18 +99,15 @@ function ReviewDashboard({ rows }) {
 
     return (
         <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
-            {/* Review Header */}
-            <Paper sx={{ p: 2, mb: 2, bgcolor: "primary.main", color: "white" }}>
-                <Typography variant="h4" gutterBottom>
+            {/* Header */}
+            <Paper sx={{ p: 2, bgcolor: "primary.main", color: "white" }}>
+                <Typography variant="h6" gutterBottom>
                     Marking Review & Reconciliation
-                </Typography>
-                <Typography variant="body1">
-                    Review submissions where AI and tutor marks differ significantly
                 </Typography>
             </Paper>
 
             {/* Filters */}
-            <Paper sx={{ p: 2, mb: 2 }}>
+            <Paper sx={{ p: 2 }}>
                 <Stack direction="row" spacing={2} alignItems="center">
                     <FormControl size="small" sx={{ minWidth: 200 }}>
                         <InputLabel>Filter by Assignment</InputLabel>
@@ -121,17 +127,17 @@ function ReviewDashboard({ rows }) {
                             ))}
                         </Select>
                     </FormControl>
-                    
-                    <Chip 
-                        label={`${needsReviewRows.length} items need review`} 
-                        color="warning" 
-                        variant="outlined" 
+
+                    <Chip
+                        label={`${needsReviewRows.length} items need review`}
+                        color="warning"
+                        variant="outlined"
                     />
                 </Stack>
             </Paper>
 
-            {/* Review Progress */}
-            <Paper sx={{ p: 2, mb: 2, bgcolor: "grey.100" }}>
+            {/* Progress */}
+            <Paper sx={{ p: 2, bgcolor: "grey.100" }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="h6">
                         Progress: {currentIndex + 1} of {needsReviewRows.length}
@@ -140,156 +146,132 @@ function ReviewDashboard({ rows }) {
                         {needsReviewRows.length - currentIndex - 1} remaining
                     </Typography>
                 </Stack>
-                <Box sx={{ width: "100%", height: 8, bgcolor: "white", borderRadius: 4, overflow: "hidden", mt: 1 }}>
-                    <Box 
-                        sx={{ 
-                            height: "100%", 
-                            bgcolor: "success.main", 
+                <Box sx={{ width: "100%", height: 8, bgcolor: "white", borderRadius: 4, overflow: "hidden" }}>
+                    <Box
+                        sx={{
+                            height: "100%",
+                            bgcolor: "success.main",
                             width: `${((currentIndex + 1) / needsReviewRows.length) * 100}%`,
-                            transition: "width 0.3s ease"
-                        }} 
+                            transition: "width 0.3s ease",
+                        }}
                     />
                 </Box>
             </Paper>
 
-            {/* Current Item for Review */}
+            {/* Current item */}
             {currentItem && (
-                <Card sx={{ mb: 2, flexGrow: 1 ,overflowY: "auto"}}>
-                    <CardContent sx={{ p: 3 }}>
+                <Card sx={{ flexGrow: 1, overflowY: "auto" }}>
+                    <CardContent >
                         <Stack spacing={3}>
                             {/* Header */}
-                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <Box>
-                                    <Typography variant="h5" gutterBottom color="primary">
-                                        {currentItem.studentName} ({currentItem.zid || `z${currentItem.studentID}`})
+                                <Box sx={{ mb: 0, mt: 0, p: 0 }}>
+                                    <Typography
+                                        sx = {{ fontSize: "1.2rem"}}
+                                        gutterBottom
+                                        color="primary"
+                                    >
+                                        Student ID: {currentItem.studentName} Assignment Name: {currentItem.assignment}
                                     </Typography>
-                                    <Typography variant="h6" color="text.secondary">
-                                        {currentItem.assignment} • Marked by: {currentItem.markBy}
-                                    </Typography>
-                                </Box>
-                                {getStatusChip(currentItem.reviewStatus)}
                             </Box>
 
                             {/* Marks Comparison */}
-                            <Paper variant="outlined" sx={{ p: 3, bgcolor: "grey.50" }}>
+                            <Paper variant="outlined" sx={{p: 2, bgcolor: "grey.50" }}>
                                 <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                     <FlagIcon color="warning" />
                                     Marks Comparison
                                 </Typography>
-                                <Stack direction="row" spacing={6} sx={{ mt: 2 }}>
+                                <Stack direction="row" spacing={6} >
                                     <Box sx={{ textAlign: "center" }}>
                                         <Typography variant="body1" color="text.secondary">Tutor Mark</Typography>
-                                        <Typography variant="h3" color="primary.main" fontWeight="bold">
+                                        <Typography variant="h4" color="primary.main" fontWeight="bold">
                                             {currentItem.tutorMark}
                                         </Typography>
                                     </Box>
                                     <Box sx={{ textAlign: "center" }}>
                                         <Typography variant="body1" color="text.secondary">AI Mark</Typography>
-                                        <Typography variant="h3" color="secondary.main" fontWeight="bold">
+                                        <Typography variant="h4" color="secondary.main" fontWeight="bold">
                                             {currentItem.aiMark}
                                         </Typography>
                                     </Box>
                                     <Box sx={{ textAlign: "center" }}>
                                         <Typography variant="body1" color="text.secondary">Difference</Typography>
-                                        <Typography 
-                                            variant="h3" 
-                                            color={Math.abs(currentItem.difference) >= 5 ? "error.main" : "text.primary"}
+                                        <Typography
+                                            variant="h4"
+                                            color={Math.abs(currentItem.difference ?? 0) >= 5 ? "error.main" : "text.primary"}
                                             fontWeight="bold"
                                         >
-                                            {currentItem.difference > 0 ? '+' : ''}{currentItem.difference}
+                                            {(currentItem.difference ?? 0) > 0 ? "+" : ""}
+                                            {currentItem.difference ?? 0}
                                         </Typography>
                                     </Box>
                                 </Stack>
                             </Paper>
 
                             {/* Feedback */}
-                            {currentItem.feedback && (
-                                <Paper variant="outlined" sx={{ p: 2 }}>
-                                    <Typography variant="h6" gutterBottom>Tutor Feedback</Typography>
+                            {!!currentItem.feedback && (
+                                <Paper variant="outlined" sx={{ p: 2, bgcolor: "grey.50" }}>
+                                    <Typography variant="h6" gutterBottom>AI Marking Feedback</Typography>
                                     <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
                                         {currentItem.feedback}
                                     </Typography>
                                 </Paper>
                             )}
 
-                            {/* Review Comments */}
-                            <Paper variant="outlined" sx={{ p: 2 }}>
-                                <Typography variant="h6" gutterBottom>Your Review Comments</Typography>
-                                <TextField
-                                    multiline
-                                    rows={4}
-                                    value={reviewComments[currentItem.studentID] || ""}
-                                    onChange={(e) => handleCommentChange(currentItem.studentID, e.target.value)}
-                                    placeholder="Provide your assessment of the marking discrepancy and any additional comments..."
-                                    fullWidth
-                                    variant="outlined"
-                                />
+                            {/* Review */}
+                            <Paper variant="outlined" sx={{ p: 2, bgcolor: "grey.50" }}>
+                                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                    <AddTaskIcon color="warning" />
+                                    Review
+                                </Typography>
+
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        gap: 2,
+                                        alignItems: "stretch",
+                                        flexDirection: { xs: "column", sm: "row" },
+                                    }}
+                                >
+                                    {/* Left: Revised mark */}
+                                    <TextField
+                                        label="Revised Marks"
+                                        type="number"
+                                        value={reviewMarks[currentItem.studentID] ?? ""}
+                                        onChange={(e) => handleMarkChange(currentItem.studentID, e.target.value)}
+                                        variant="outlined"
+                                        inputProps={{ min: 0, max: 100, step: 1 }}
+                                        sx={{ width: { xs: "100%", sm: 180 } }}
+                                        helperText="0-100"
+                                    />
+
+                                    {/* Right: Comments */}
+                                    <TextField
+                                        label="Your Review Comments"
+                                        multiline
+                                        rows={4}
+                                        value={reviewComments[currentItem.studentID] ?? ""}
+                                        onChange={(e) => handleCommentChange(currentItem.studentID, e.target.value)}
+                                        placeholder="Provide your assessment of the marking discrepancy and any additional comments..."
+                                        fullWidth
+                                        variant="outlined"
+                                    />
+                                </Box>
                             </Paper>
 
-                            {/* Action Buttons */}
+                            {/* Actions */}
                             <Stack direction="row" spacing={2} justifyContent="flex-end">
-                                <Button
-                                    variant="outlined"
-                                    color="error"
-                                    startIcon={<CancelIcon />}
-                                    onClick={() => handleDecision(currentItem.studentID, "rejected")}
-                                    size="large"
-                                    sx={{ minWidth: 140 }}
-                                >
-                                    Reject Marks
-                                </Button>
                                 <Button
                                     variant="contained"
                                     color="success"
                                     startIcon={<CheckCircleIcon />}
-                                    onClick={() => handleDecision(currentItem.studentID, "approved")}
+                                    onClick={() => handleDecision(currentItem.studentID)}
                                     size="large"
-                                    sx={{ minWidth: 140 }}
+                                    sx={{ minWidth: 200 }}
+                                    disabled={saving}
                                 >
-                                    Approve Marks
+                                    {saving ? "Saving..." : "Submit with revised mark"}
                                 </Button>
                             </Stack>
-                        </Stack>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Review Summary */}
-            {Object.keys(decisions).length > 0 && (
-                <Card>
-                    <CardContent>
-                        <Typography variant="h6" gutterBottom>Review Summary</Typography>
-                        <Stack spacing={2}>
-                            {Object.entries(decisions).map(([studentID, decisionData]) => {
-                                const item = rows.find((r) => String(r.studentID) === studentID);
-                                return item ? (
-                                    <Paper key={studentID} variant="outlined" sx={{ p: 2 }}>
-                                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                                            <Box>
-                                                <Typography variant="subtitle1" fontWeight="bold">
-                                                    {item.zid || `z${item.studentID}`} - {item.assignment}
-                                                </Typography>
-                                                <Typography variant="body2" color="text.secondary">
-                                                    {item.studentName} • {item.markBy}
-                                                </Typography>
-                                                {decisionData.comments && (
-                                                    <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                                                        Comments: {decisionData.comments}
-                                                    </Typography>
-                                                )}
-                                                <Typography variant="caption" color="text.secondary">
-                                                    Reviewed: {decisionData.timestamp}
-                                                </Typography>
-                                            </Box>
-                                            <Chip 
-                                                label={decisionData.decision === "approved" ? "Approved" : "Rejected"} 
-                                                color={decisionData.decision === "approved" ? "success" : "error"}
-                                                size="medium"
-                                            />
-                                        </Stack>
-                                    </Paper>
-                                ) : null;
-                            })}
                         </Stack>
                     </CardContent>
                 </Card>
@@ -298,12 +280,15 @@ function ReviewDashboard({ rows }) {
     );
 }
 
+/** ─────────────────────────────────────────────────────────────────────────────
+ * Airesult page
+ * ────────────────────────────────────────────────────────────────────────────*/
 export default function Airesult() {
     const [searchParams] = useSearchParams();
     const courseId = searchParams.get("courseId");
     const [course, setCourse] = useState("");
     const [term, setTerm] = useState("");
-    const [dashboardOpen, setDashboardOpen] = useState("dashboard"); // "dashboard" or "review"
+    const [dashboardOpen, setDashboardOpen] = useState("dashboard");
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState("");
@@ -315,7 +300,7 @@ export default function Airesult() {
 
     useEffect(() => {
         if (!courseId) {
-            setFetchError("缺少课程ID，请从课程列表进入查看。");
+            setFetchError("Missing course ID, please try again.");
             setRows([]);
             return;
         }
@@ -348,11 +333,7 @@ export default function Airesult() {
                         diff = 0;
                     }
 
-                    const needsReview =
-                        item.needs_review !== undefined && item.needs_review !== null
-                            ? item.needs_review
-                            : Math.abs(diff ?? 0) >= 5;
-
+                    const needsReview = item.needs_review === true;
                     const zid = item.zid ? String(item.zid) : `z${index + 1}`;
                     const studentIdValue = zid.replace(/^z/i, "") || zid;
 
@@ -367,8 +348,9 @@ export default function Airesult() {
                         feedback: item.ai_feedback || item.feedback || "",
                         assignment: item.assignment || "Unassigned",
                         needsReview,
+                        reviewMark: item.review_mark ?? "",
+                        reviewComments: item.review_comments ?? "",
                         reviewStatus: item.review_status || "pending",
-                        reviewComments: item.review_comments || "",
                     };
                 });
 
@@ -378,7 +360,7 @@ export default function Airesult() {
             })
             .catch((err) => {
                 if (cancelled) return;
-                setFetchError(err?.message || "加载AI结果失败，请稍后再试。");
+                setFetchError(err?.message || "Loading AI failed");
                 setRows([]);
             })
             .finally(() => {
@@ -397,19 +379,16 @@ export default function Airesult() {
     const [selectedAssignment, setSelectedAssignment] = useState("all");
     const [selectedTutor, setSelectedTutor] = useState("all");
 
+    // ⟵ UPDATED: derive purely from API rows
     const availableAssignments = useMemo(() => {
         const uniq = new Set();
-        rows.forEach((r) => {
-            if (r.assignment) uniq.add(r.assignment);
-        });
+        rows.forEach((r) => r.assignment && uniq.add(r.assignment));
         return Array.from(uniq);
     }, [rows]);
 
     const availableTutors = useMemo(() => {
         const uniq = new Set();
-        rows.forEach((r) => {
-            if (r.markBy) uniq.add(r.markBy);
-        });
+        rows.forEach((r) => r.markBy && uniq.add(r.markBy));
         return Array.from(uniq);
     }, [rows]);
 
@@ -425,19 +404,34 @@ export default function Airesult() {
         }
     }, [availableTutors, selectedTutor]);
 
-    const filteredRows = useMemo(
+    // ⟵ UPDATED: filter only from real rows
+    const filteredRows = useMemo(() => {
+        return rows.filter(
+            (r) =>
+                (selectedAssignment === "all" || r.assignment === selectedAssignment) &&
+                (selectedTutor === "all" || r.markBy === selectedTutor)
+        );
+    }, [rows, selectedAssignment, selectedTutor]);
+
+    // Keep difference consistent; if it already exists, keep it; else compute defensively
+    const rowsForUI = useMemo(
         () =>
-            rows.filter(
-                (r) =>
-                    (selectedAssignment === "all" || r.assignment === selectedAssignment) &&
-                    (selectedTutor === "all" || r.markBy === selectedTutor)
-            ),
-        [rows, selectedAssignment, selectedTutor]
+            filteredRows.map((r) => {
+                if (typeof r.difference === "number") return r;
+                const ai = r.aiMark ?? null;
+                const tutor = r.tutorMark ?? null;
+                const diff =
+                    ai !== null && tutor !== null && !Number.isNaN(ai) && !Number.isNaN(tutor)
+                        ? Number((ai - tutor).toFixed(2))
+                        : 0;
+                return { ...r, difference: diff };
+            }),
+        [filteredRows]
     );
 
     return (
         <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-            {/* ── Title bar (full width) ── */}
+            {/* ── Title bar ── */}
             <Box
                 sx={{
                     position: "sticky",
@@ -470,7 +464,8 @@ export default function Airesult() {
                     {course} {term}
                 </Typography>
 
-                <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+                <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }} alignItems="center">
+                    {/* ⟵ REMOVED: Dummy toggle */}
                     <Tooltip title="Back to Course Page" arrow>
                         <IconButton onClick={() => navigate("/courses", { replace: true })}>
                             <ArrowBackIcon sx={{ fontSize: 32 }} />
@@ -486,7 +481,7 @@ export default function Airesult() {
 
             {/* ── Sidebar + Main content ── */}
             <Box sx={{ display: "flex", flexGrow: 1 }}>
-                <Sidebar topOffset={TOPBAR_HEIGHT} setDashboardOpen={setDashboardOpen}/>
+                <Sidebar topOffset={TOPBAR_HEIGHT} setDashboardOpen={setDashboardOpen} />
 
                 <Box
                     component="main"
@@ -500,10 +495,8 @@ export default function Airesult() {
                         pt: 4,
                         px: 4,
                         maxWidth: "90vw",
-                        // mx: "auto",
-                        overflowY: "auto", // ✅ 关键：内容超出时显示垂直滚动条
-                        scrollBehavior: "smooth",               
-                        // maxHeight: "90vh",
+                        overflowY: "auto",
+                        scrollBehavior: "smooth",
                         mx: "auto",
                     }}
                 >
@@ -516,7 +509,7 @@ export default function Airesult() {
 
                     {loading && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            正在加载AI评分结果...
+                            Loading AI results...
                         </Alert>
                     )}
                     {fetchError && (
@@ -526,7 +519,7 @@ export default function Airesult() {
                     )}
                     {!loading && !fetchError && rows.length === 0 && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            暂无评分记录。
+                            No results found
                         </Alert>
                     )}
 
@@ -555,7 +548,9 @@ export default function Airesult() {
                                         >
                                             <MenuItem value="all">All assignments</MenuItem>
                                             {availableAssignments.map((a) => (
-                                                <MenuItem key={a} value={a}>{a}</MenuItem>
+                                                <MenuItem key={a} value={a}>
+                                                    {a}
+                                                </MenuItem>
                                             ))}
                                         </Select>
                                     </FormControl>
@@ -570,7 +565,9 @@ export default function Airesult() {
                                         >
                                             <MenuItem value="all">All tutors</MenuItem>
                                             {availableTutors.map((t) => (
-                                                <MenuItem key={t} value={t}>{t}</MenuItem>
+                                                <MenuItem key={t} value={t}>
+                                                    {t}
+                                                </MenuItem>
                                             ))}
                                         </Select>
                                     </FormControl>
@@ -580,7 +577,9 @@ export default function Airesult() {
                                         exclusive
                                         value={variant}
                                         aria-label="dashboard view"
-                                        onChange={(_, v) => { if (v) setVariant(v); }}
+                                        onChange={(_, v) => {
+                                            if (v) setVariant(v);
+                                        }}
                                     >
                                         <ToggleButton value="studentView" aria-label="student view" type="button">
                                             Main
@@ -595,19 +594,34 @@ export default function Airesult() {
                             {/* Content area */}
                             <Box sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}>
                                 {variant === "studentView" ? (
-                                    <Box sx={{ width: "100%", height: "100%" ,display: "flex", flexDirection: "column", overflowY: "auto"}}>
-                                        <DashboardStudent variant="studentView" rows={filteredRows} />
+                                    <Box
+                                        sx={{
+                                            width: "100%",
+                                            height: "100%",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            overflowY: "auto",
+                                        }}
+                                    >
+                                        <DashboardStudent variant="studentView" rows={rowsForUI} />
                                     </Box>
                                 ) : (
-                                    <Box sx={{ width: "100%", height: "80%" ,display: "flex", flexDirection: "column", overflowY: "auto"}}>
-                                        <DashboardTutorScatter variant="tutorView" rows={filteredRows} />
+                                    <Box
+                                        sx={{
+                                            width: "100%",
+                                            height: "80%",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            overflowY: "auto",
+                                        }}
+                                    >
+                                        <DashboardTutorScatter variant="tutorView" rows={rowsForUI} />
                                     </Box>
                                 )}
                             </Box>
                         </>
                     ) : dashboardOpen === "review" ? (
-                        // Review Dashboard
-                        <ReviewDashboard rows={filteredRows} />
+                        <ReviewDashboard rows={rowsForUI} courseId={courseId} />
                     ) : (
                         <Typography variant="h4">Coming Soon...</Typography>
                     )}

@@ -33,9 +33,34 @@ const columns = [
                 {params.value}
             </Box>
         ),
-    }
+    },
+    {
+        field: "reviewMark",
+        headerName: "Revised Mark",
+        width: 120,
+        align: "center",
+        headerAlign: "center",
+        valueGetter: (_val, row) => row?.reviewMark ?? "",
+    },
+    {
+        field: "reviewComments",
+        headerName: "Revised Feedback",
+        flex: 1,
+        renderCell: (params) => (
+            <Box
+                sx={{
+                    whiteSpace: "normal",
+                    wordBreak: "break-word",
+                    lineHeight: 1.4,
+                    py: 1,
+                    overflow: "visible",
+                }}
+            >
+                {params.value}
+            </Box>
+        ),
+    },
 ];
-
 
 export default function DashboardStudent({ variant = "studentView", rows = [] }) {
     const isTutorView = variant === "tutorView";
@@ -47,20 +72,15 @@ export default function DashboardStudent({ variant = "studentView", rows = [] })
             <DataGrid
                 rows={rows}
                 columns={columns}
-                getRowHeight={() => "auto"}   // ✅ Allows each row to grow based on content
-                getEstimatedRowHeight={() => 80} // (Optional) Improves performance
-                getRowId={(row) =>
-                    row.assignment ? `${row.assignment}-${row.studentID}` : row.studentID
-                }
+                getRowHeight={() => "auto"}
+                getEstimatedRowHeight={() => 80}
+                getRowId={(row) => (row.assignment ? `${row.assignment}-${row.studentID}` : row.studentID)}
                 density={density}
                 columnVisibilityModel={columnVisibilityModel}
-
-                // 🔕 remove all DataGrid filtering UI
                 disableColumnFilter
                 disableColumnSelector
                 disableDensitySelector
                 hideFooterSelectedRowCount
-
                 initialState={{
                     pagination: { paginationModel: { pageSize: isTutorView ? 10 : 5 } },
                 }}
@@ -71,18 +91,17 @@ export default function DashboardStudent({ variant = "studentView", rows = [] })
                     "& .MuiDataGrid-cell": {
                         display: "flex",
                         alignItems: "center",
-                        whiteSpace: "normal !important",  // allow wrapping
+                        whiteSpace: "normal !important",
                     },
                     "& .MuiDataGrid-row": {
-                        maxHeight: "none !important",     // remove row height cap
+                        maxHeight: "none !important",
                     },
                     "& .MuiDataGrid-virtualScrollerRenderZone": {
                         "& .MuiDataGrid-row": {
                             maxHeight: "none !important",
-                        }
+                        },
                     },
                 }}
-
             />
         </Box>
     );
