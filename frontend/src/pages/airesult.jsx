@@ -53,23 +53,32 @@ function ReviewDashboard({ rows, courseId }) {
     // ⟵ UPDATED: call API to persist revised mark/comments
     const handleDecision = async (studentID) => {
         const payload = {
-            course_id: courseId,
-            student_id: String(studentID),
             zid: currentItem?.zid ?? String(studentID),
             assignment: currentItem?.assignment ?? "",
-            revised_mark: reviewMarks[studentID] ?? 0,
-            comments: reviewComments[studentID] ?? "",
+            needsReview: false,
+            review_mark: reviewMarks[studentID] ?? 0,
+            review_comments: reviewComments[studentID] ?? "",
         };
 
         try {
             setSaving(true);
-            // await API.markingResults.saveReview(payload); // disabled for now
+            await API.markingResults.upsert(courseId, payload); 
             toast.success(
-                `Revised mark saved for course: ${payload.course_id} assignment: ${payload.assignment} ZID: ${payload.zid} — Mark: ${payload.revised_mark} Comments: ${payload.comments}`
-            );
+                `Revised mark saved for course: ${courseId} ` +
+                `assignment: ${payload.assignment} ` +
+                `ZID: ${payload.zid} — ` +
+                `Mark: ${payload.review_mark} ` +
+                `Comments: ${payload.review_comments}`
+                );
+
             // advance to next item
             if (currentIndex < needsReviewRows.length - 1) {
                 setCurrentIndex((prev) => prev + 1);
+            } else if (currentIndex === needsReviewRows.length - 1) {
+                toast.success("🎉 All submissions have been reviewed!");
+                setCurrentIndex(0); // reset index to avoid overflow
+                needsReviewRows.length = 0;
+                
             }
         } catch (e) {
             toast.error(e?.message || "Failed to save revised mark");
@@ -370,7 +379,7 @@ export default function Airesult() {
         return () => {
             cancelled = true;
         };
-    }, [courseId]);
+    }, [courseId, dashboardOpen]);
 
     const navigate = useNavigate();
     const { logout } = useAuth();
@@ -465,7 +474,6 @@ export default function Airesult() {
                 </Typography>
 
                 <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }} alignItems="center">
-                    {/* ⟵ REMOVED: Dummy toggle */}
                     <Tooltip title="Back to Course Page" arrow>
                         <IconButton onClick={() => navigate("/courses", { replace: true })}>
                             <ArrowBackIcon sx={{ fontSize: 32 }} />
