@@ -8,3 +8,5 @@ __pycache__/
 /dev.db
 /uploads/
 /marking_result/
+
+.venv/
