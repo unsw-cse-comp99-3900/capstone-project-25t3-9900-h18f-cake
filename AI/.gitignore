@@ -16,3 +16,4 @@ artifacts/
 results/
 
 data/
+logs/llm_calls

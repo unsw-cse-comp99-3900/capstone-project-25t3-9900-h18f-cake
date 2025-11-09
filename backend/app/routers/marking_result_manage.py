@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, Optional, Dict, List, Tuple
 import json, datetime, re
 from fastapi import UploadFile, File
@@ -92,6 +92,8 @@ def save_json_atomic(path: Path, data: Dict[str, Any]) -> None:
 
 # ---------- Schemas ----------
 class MarkingIn(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     zid: str
     student_name: Optional[str] = None
     assignment_id: Optional[int] = None 
@@ -109,10 +111,6 @@ class MarkingIn(BaseModel):
     review_status: Optional[str] = None
     review_mark: Optional[float] = None
     review_comments: Optional[str] = None
-
-    class Config:
-        allow_population_by_field_name = True
-
 
 class MarkingOut(MarkingIn):
     created_at: str

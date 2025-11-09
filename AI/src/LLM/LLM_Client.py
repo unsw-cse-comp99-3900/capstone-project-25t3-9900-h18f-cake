@@ -104,6 +104,28 @@ class LLMClient:
                 f.write(str(result))
             print(f"File saved: {output_path}")
 
+    def _save_log(self, prompt: str, payload: Any, success: bool) -> None:
+        """
+        Persist a lightweight record of the prompt/response for troubleshooting.
+        Falls back to stdout if log writing fails or logging disabled.
+        """
+        if not self.save_log:
+            return
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "model": self.model,
+            "success": success,
+            "prompt": prompt,
+            "payload": payload,
+        }
+        filename = datetime.utcnow().strftime("%Y%m%d-%H%M%S-%f") + ("-ok" if success else "-err") + ".json"
+        path = os.path.join(self.log_dir, filename)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(log_entry, f, ensure_ascii=False, indent=2)
+        except Exception as log_exc:
+            print(f"[WARN] failed to write LLM log {path}: {log_exc}")
+
 # # ------------------------------------------------------------
 # # ✅ 示例运行（独立调试）
 # # ------------------------------------------------------------

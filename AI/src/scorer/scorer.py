@@ -99,12 +99,16 @@ class TeacherGuidedScorer:
                 time.sleep(5)  # 防止 API rate limit
             except Exception as e:
                 print(f"[ERROR] Failed {file_name}: {e}")
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         if all_results:
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(all_results, f, ensure_ascii=False, indent=2)
             print(f"[INFO] All scoring results saved to {output_path}")
         else:
             print("[WARN] No results were generated.")
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
+        return all_results
 
 
 
