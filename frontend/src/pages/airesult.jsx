@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import {
     Box, Stack, IconButton, Typography,
     ToggleButton, ToggleButtonGroup,
@@ -56,10 +56,12 @@ function ReviewDashboard({ rows, courseId, onReviewed = () => {} }) {
         const payload = {
             zid: currentItem?.zid ?? String(studentID),
             assignment: currentItem?.assignment ?? "",
-            assignment_id: currentItem?.assignmentId ?? null,
-            needsReview: false,
+            ...(currentItem?.assignmentId != null
+                ? { assignment_id: currentItem.assignmentId }
+                : {}),
             review_mark: reviewMarks[studentID] ?? 0,
             review_comments: reviewComments[studentID] ?? "",
+            review_status: "reviewed",
         };
 
         try {
@@ -309,6 +311,58 @@ export default function Airesult() {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState("");
+    const [aiCompleted, setAiCompleted] = useState(true);
+    const [statusChecking, setStatusChecking] = useState(false);
+    const statusPollRef = useRef(null);
+
+    // Check per-course AI status; poll until completed
+    useEffect(() => {
+        if (!courseId) return;
+        let cancelled = false;
+        setStatusChecking(true);
+        // clear any previous poller
+        if (statusPollRef.current) {
+            clearInterval(statusPollRef.current);
+            statusPollRef.current = null;
+        }
+        API.markingResults
+            .status(courseId)
+            .then((s) => {
+                if (cancelled) return;
+                const done = Boolean(s?.ai_completed);
+                setAiCompleted(done);
+                if (!done) {
+                    statusPollRef.current = setInterval(async () => {
+                        try {
+                            const s2 = await API.markingResults.status(courseId);
+                            if (s2?.ai_completed) {
+                                setAiCompleted(true);
+                                if (statusPollRef.current) {
+                                    clearInterval(statusPollRef.current);
+                                    statusPollRef.current = null;
+                                }
+                            }
+                        } catch (e) {
+                            // ignore transient errors
+                        }
+                    }, 5000);
+                }
+            })
+            .catch(() => {
+                // If status endpoint fails, fall back to allowing view
+                setAiCompleted(true);
+            })
+            .finally(() => {
+                if (!cancelled) setStatusChecking(false);
+            });
+        return () => {
+            cancelled = true;
+            if (statusPollRef.current) {
+                clearInterval(statusPollRef.current);
+                statusPollRef.current = null;
+            }
+        };
+    }, [courseId]);
 
     useEffect(() => {
         setCourse(searchParams.get("course") || "");
@@ -318,6 +372,13 @@ export default function Airesult() {
     useEffect(() => {
         if (!courseId) {
             setFetchError("Missing course ID, please try again.");
+            setRows([]);
+            return;
+        }
+        // wait until AI completes for this course
+        if (!aiCompleted) {
+            setLoading(false);
+            setFetchError("");
             setRows([]);
             return;
         }
@@ -332,7 +393,8 @@ export default function Airesult() {
             .then((data) => {
                 if (cancelled) return;
                 const items = Array.isArray(data?.marking_results) ? data.marking_results : [];
-                const mapped = items.map((item, index) => {
+                // Normalize then de-duplicate by (zid, assignmentId||assignment)
+                const normalized = items.map((item, index) => {
                     const aiRaw = item.ai_total ?? item.aiMark ?? null;
                     const tutorRaw = item.tutor_total ?? item.tutorMark ?? null;
                     const ai = aiRaw !== null && aiRaw !== undefined ? Number(aiRaw) : null;
@@ -350,7 +412,9 @@ export default function Airesult() {
                         diff = 0;
                     }
 
-                    const needsReview = item.needs_review === true;
+                    const statusLower = String(item.review_status || "").toLowerCase();
+                    const reviewedDone = ["reviewed", "completed", "resolved", "checked"].includes(statusLower);
+                    const needsReview = reviewedDone ? false : item.needs_review === true;
                     const zid = item.zid ? String(item.zid) : `z${index + 1}`;
                     const studentIdValue = zid.replace(/^z/i, "") || zid;
 
@@ -369,7 +433,36 @@ export default function Airesult() {
                         reviewMark: item.review_mark ?? "",
                         reviewComments: item.review_comments ?? "",
                         reviewStatus: item.review_status || "pending",
+                        _reviewedDone: reviewedDone,
+                        _raw: item,
                     };
+                });
+
+                const pickBetter = (a, b) => {
+                    if (!a) return b;
+                    if (!b) return a;
+                    if (a._reviewedDone && !b._reviewedDone) return a;
+                    if (!a._reviewedDone && b._reviewedDone) return b;
+                    const aBoth = a.aiMark != null && a.tutorMark != null;
+                    const bBoth = b.aiMark != null && b.tutorMark != null;
+                    if (aBoth && !bBoth) return a;
+                    if (!aBoth && bBoth) return b;
+                    const aAny = a.aiMark != null || a.tutorMark != null;
+                    const bAny = b.aiMark != null || b.tutorMark != null;
+                    if (aAny && !bAny) return a;
+                    if (!aAny && bAny) return b;
+                    return a;
+                };
+
+                const byKey = new Map();
+                for (const r of normalized) {
+                    const key = `${r.zid}::${r.assignmentId ?? ""}::${r.assignment}`;
+                    byKey.set(key, pickBetter(byKey.get(key), r));
+                }
+
+                const mapped = Array.from(byKey.values()).map((r) => {
+                    const { _raw, _reviewedDone, ...rest } = r;
+                    return rest;
                 });
 
                 setRows(mapped);
@@ -388,7 +481,7 @@ export default function Airesult() {
         return () => {
             cancelled = true;
         };
-    }, [courseId, dashboardOpen]);
+    }, [courseId, dashboardOpen, aiCompleted]);
 
     const navigate = useNavigate();
     const { logout } = useAuth();
@@ -549,23 +642,28 @@ export default function Airesult() {
                         navigate={navigate}
                     />
 
-                    {loading && (
+                    {(!aiCompleted || statusChecking) && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            AI grading in progress for this course. Please wait...
+                        </Alert>
+                    )}
+                    {loading && aiCompleted && (
                         <Alert severity="info" sx={{ mb: 2 }}>
                             Loading AI results...
                         </Alert>
                     )}
-                    {fetchError && (
+                    {fetchError && aiCompleted && (
                         <Alert severity="error" sx={{ mb: 2 }}>
                             {fetchError}
                         </Alert>
                     )}
-                    {!loading && !fetchError && rows.length === 0 && (
+                    {!loading && aiCompleted && !fetchError && rows.length === 0 && (
                         <Alert severity="info" sx={{ mb: 2 }}>
                             No results found
                         </Alert>
                     )}
 
-                    {dashboardOpen === "dashboard" ? (
+                    {aiCompleted && dashboardOpen === "dashboard" ? (
                         <>
                             {/* Filters & toggles */}
                             <Stack
@@ -662,7 +760,7 @@ export default function Airesult() {
                                 )}
                             </Box>
                         </>
-                    ) : dashboardOpen === "review" ? (
+                    ) : aiCompleted && dashboardOpen === "review" ? (
                         <ReviewDashboard rows={rowsForUI} courseId={courseId} onReviewed={handleReviewed} />
                     ) : (
                         <Typography variant="h4">Coming Soon...</Typography>

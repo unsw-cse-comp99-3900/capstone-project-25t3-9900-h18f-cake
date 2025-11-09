@@ -1,8 +1,11 @@
 
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography } from "@mui/material";
 
-export default function CourseActionDialog({ open, course, onClose, onUpload, onView }) {
+export default function CourseActionDialog({ open, course, onClose, onUpload, onView, viewStatus }) {
     const term = course?.term || course?.year_term || "";
+    const aiCompleted = !!(viewStatus && viewStatus.aiCompleted);
+    const loading = !!(viewStatus && viewStatus.loading);
+    const errorMsg = viewStatus && viewStatus.error;
 
     return (
         <Dialog
@@ -53,10 +56,17 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                         Upload an assignment
                     </Button>
 
+                    {!aiCompleted && (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+                            {loading ? "Checking AI status..." : (errorMsg ? `Status check failed: ${errorMsg}` : "AI is still grading for this course. You can view other courses meanwhile.")}
+                        </Typography>
+                    )}
+
                     <Button
                         variant="contained"                 
                         size="large"
                         onClick={onView}
+                        disabled={!aiCompleted || loading || !viewStatus}
                         sx={{
                             borderRadius: 2,
                             textTransform: "none",
@@ -71,7 +81,7 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                             "&:hover": { bgcolor: "grey.300" }
                         }}
                     >
-                        View AI-generated grades
+                        {aiCompleted ? "View AI-generated grades" : ((loading || !viewStatus) ? "Loading status..." : "AI grading in progress")}
                     </Button>
                 </Stack>
             </DialogContent>

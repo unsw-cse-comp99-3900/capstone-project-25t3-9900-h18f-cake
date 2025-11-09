@@ -116,11 +116,19 @@ def sync_tutor_mark_from_file(
     if ai_total is not None and tutor_total is not None:
         difference = round(ai_total - tutor_total, 2)
 
-    if ai_total is not None and tutor_total is not None:
-        denom = abs(tutor_total) if abs(tutor_total) > 1e-9 else 1.0
-        needs_review = (abs(ai_total - tutor_total) / denom) >= _REVIEW_DIFF_THRESHOLD
+    # Respect already reviewed status to avoid re-flagging
+    existing_status = (existing or {}).get("review_status") or ""
+    status_lower = str(existing_status).lower()
+    already_reviewed = status_lower in {"reviewed", "completed", "resolved", "checked"}
+
+    if already_reviewed:
+        needs_review = False
     else:
-        needs_review = bool((existing or {}).get("needs_review"))
+        if ai_total is not None and tutor_total is not None:
+            denom = abs(tutor_total) if abs(tutor_total) > 1e-9 else 1.0
+            needs_review = (abs(ai_total - tutor_total) / denom) >= _REVIEW_DIFF_THRESHOLD
+        else:
+            needs_review = bool((existing or {}).get("needs_review"))
 
     payload = {
         "zid": zid,
@@ -157,33 +165,32 @@ def sync_ai_predictions_from_file(
         raise ValueError(f"Assignment {assignment_id} not found")
 
     course = assignment.course
+
     prediction_path = Path(prediction_path)
     if not prediction_path.exists():
         raise FileNotFoundError(f"Prediction file not found: {prediction_path}")
 
     try:
-        predictions: Iterable[Dict[str, Any]] = json.loads(prediction_path.read_text(encoding="utf-8"))
+        predictions: Iterable[Dict[str, Any]] = json.loads(
+            prediction_path.read_text(encoding="utf-8")
+        )
     except Exception as exc:
         raise ValueError(f"Failed to parse prediction JSON: {exc}") from exc
-
     json_path = course_json_path_by_course(course)
     data = load_json(json_path)
     data["course"] = course.code
     data["name"] = course.name or ""
     data["term"] = course.term or ""
 
-    updated_records = []
-
+    updated_records: list[Dict[str, Any]] = []
     for item in predictions:
-        # zid = (item.get("student_id") or "").lower()
-        zid_raw = item.get("student_id", "").lower()
+        zid_raw = (item.get("student_id") or "").lower()
         zid = zid_raw.split("_")[0]
         if not zid:
             continue
 
         result = item.get("result") or {}
         ai_total = _to_float(result.get("total"))
-
         detail: Dict[str, Any] = {}
         feedback_parts: list[str] = []
         for key, val in result.items():
@@ -200,31 +207,38 @@ def sync_ai_predictions_from_file(
                 feedback_parts.append(f"{key}: {val['comments']}")
 
         ai_feedback = "\n".join(feedback_parts) if feedback_parts else None
-
-        existing: Optional[Dict[str, Any]] = next(
-            (
-                r for r in data["marking_results"]
-                if isinstance(r, dict)
-                and str(r.get("zid", "")).lower() == zid
-                and r.get("assignment_id") == assignment_id
-            ),
-            None,
-        )
+        existing: Optional[Dict[str, Any]] = None
+        for r in data["marking_results"]:
+            if not isinstance(r, dict):
+                continue
+            same_zid = (r.get("zid", "") or "").lower() == zid
+            same_aid = r.get("assignment_id") == assignment_id
+            if same_zid and same_aid:
+                existing = r
+                break
 
         tutor_total = _to_float((existing or {}).get("tutor_total"))
         difference: Optional[float] = None
         if ai_total is not None and tutor_total is not None:
             difference = round(ai_total - tutor_total, 2)
+        existing_status = (existing or {}).get("review_status") or ""
+        status_lower = str(existing_status).lower()
+        already_reviewed = status_lower in {"reviewed", "completed", "resolved", "checked"}
 
-        if ai_total is not None and tutor_total is not None:
-            denom = abs(tutor_total) if abs(tutor_total) > 1e-9 else 1.0
-            needs_review = (abs(ai_total - tutor_total) / denom) >= _REVIEW_DIFF_THRESHOLD
+        if already_reviewed:
+            needs_review = False
+            review_status = existing_status
         else:
-            needs_review = bool(existing and existing.get("needs_review"))
+            if difference is not None and tutor_total not in (None, 0):
+                denom = abs(tutor_total) if abs(tutor_total) > 1e-9 else 1.0
+                needs_review = (abs(difference) / denom) >= _REVIEW_DIFF_THRESHOLD
+            else:
+                needs_review = bool((existing or {}).get("needs_review"))
+            review_status = existing_status or "pending"
 
         payload = {
             "zid": zid,
-            "assignment_id": assignment_id, 
+            "assignment_id": assignment_id,
             "assignment": (existing or {}).get("assignment") or assignment.title or "",
             "student_name": (existing or {}).get("student_name") or zid,
             "ai_marking_detail": detail or None,
@@ -234,7 +248,7 @@ def sync_ai_predictions_from_file(
             "marked_by": (existing or {}).get("marked_by") or "ai",
             "difference": difference,
             "needs_review": needs_review,
-            "review_status": (existing or {}).get("review_status", "pending"),
+            "review_status": review_status,
             "review_comments": (existing or {}).get("review_comments", ""),
             "ai_feedback": ai_feedback,
             "tutor_feedback": (existing or {}).get("tutor_feedback"),

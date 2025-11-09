@@ -6,6 +6,11 @@ from .. import models
 from ..utils.path_utils import assignment_dir
 from .ai_bridge import copy_students_for_predict_to_ai
 from .marking_sync import sync_ai_predictions_from_file
+from ..routers.marking_result_manage import (
+    course_json_path_by_course,
+    load_json,
+    save_json_atomic,
+)
 
 def ai_worker(assignment_id: int, st) -> None:
     print(f"[AI][WORKER] >>> START aid={assignment_id} thread={threading.current_thread().name}", flush=True)
@@ -16,6 +21,16 @@ def ai_worker(assignment_id: int, st) -> None:
             print(f"[AI][WORKER] invalid assignment: {assignment_id}", flush=True)
             st.update(progress=1.0, message="invalid assignment")
             return
+
+        # Mark AI status as started (ai_completed = False)
+        try:
+            json_path = course_json_path_by_course(assignment.course)
+            data = load_json(json_path)
+            data["ai_completed"] = False
+            save_json_atomic(json_path, data)
+            print(f"[AI][WORKER] set ai_completed=False for course {assignment.course.code}", flush=True)
+        except Exception:
+            print("[AI][WORKER] failed to set ai_completed False", file=sys.stderr, flush=True)
 
         assignment_root = assignment_dir(
             assignment.course.code,
@@ -69,6 +84,15 @@ def ai_worker(assignment_id: int, st) -> None:
         try:
             sync_result = sync_ai_predictions_from_file(db, assignment_id, prediction_path)
             print(f"[AI][WORKER] sync_result={sync_result}", flush=True)
+            # Mark AI status as completed (ai_completed = True)
+            try:
+                json_path = course_json_path_by_course(assignment.course)
+                data = load_json(json_path)
+                data["ai_completed"] = True
+                save_json_atomic(json_path, data)
+                print(f"[AI][WORKER] set ai_completed=True for course {assignment.course.code}", flush=True)
+            except Exception:
+                print("[AI][WORKER] failed to set ai_completed True", file=sys.stderr, flush=True)
             st.update(progress=1.0, message=f"synced {sync_result.get('updated',0)} record(s)")
         except Exception:
             st.update(progress=1.0, message="sync failed")

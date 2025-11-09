@@ -203,7 +203,30 @@ def get_marking_status(
         raise HTTPException(status_code=400, detail=str(e))
 
     data = load_json(json_path)
-    return {"ai_completed": bool(data.get("ai_completed"))}
+    ai_completed = bool(data.get("ai_completed"))
+
+    # Dynamic override: if any assignment job of this course is queued/running, treat as not completed
+    try:
+        # Local import to avoid circular import at module load time
+        from app.utils.jobq import get_jobq
+        st_map = get_jobq().list_status()
+        pending = False
+        for aid, st in st_map.items():
+            a = db.get(models.Assignment, int(aid))
+            if not a or not getattr(a, "course_id", None):
+                continue
+            if a.course_id != course.id:
+                continue
+            if str(getattr(st, "state", "")).lower() in {"queued", "running"}:
+                pending = True
+                break
+        if pending:
+            ai_completed = False
+    except Exception:
+        # Fall back to stored flag if dynamic status fails
+        pass
+
+    return {"ai_completed": ai_completed}
 
 
 @router.put("/{course_id}/status")
@@ -243,7 +266,6 @@ def append_marking_result(
     c = db.get(models.Course, course_id)
     if not c:
         raise HTTPException(status_code=404, detail="Course not found")
-
     try:
         json_path = course_json_path_by_course(c)
     except ValueError as e:
@@ -261,76 +283,93 @@ def append_marking_result(
             return None
 
     incoming = payload.dict(exclude_unset=True)
-    zid = str(incoming.get("zid") or payload.zid or "").strip()
-    if not zid:
-        raise HTTPException(status_code=400, detail="zid is required")
+    # Avoid clobbering existing keys with explicit nulls from clients
+    if "assignment_id" in incoming and incoming["assignment_id"] is None:
+        incoming.pop("assignment_id")
 
-    incoming["zid"] = zid
-    if "ai_total" in incoming:
-        incoming["ai_total"] = to_float(incoming["ai_total"])
-    if "tutor_total" in incoming:
-        incoming["tutor_total"] = to_float(incoming["tutor_total"])
-    zid_norm = zid.lower()
+    zid_raw = str(incoming.get("zid", "")).strip()
+    zid_norm = zid_raw.lower()
     aid = incoming.get("assignment_id")
+    ass = str(incoming.get("assignment", "")).strip()
 
+    existing = None
     existing_idx = None
-    for idx, rec in enumerate(data["marking_results"]):
-        if isinstance(rec, dict) and rec.get("zid") == zid:
-            existing_idx = idx
-            break
-
-    if existing_idx is not None:
-        record = {**data["marking_results"][existing_idx]}
-    else:
-        record = {"zid": zid, "created_at": _now_utc_iso()}
-
-    record.update({k: v for k, v in incoming.items() if k != "needs_review"})
-
-    ai_value = record.get("ai_total")
-    tutor_value = record.get("tutor_total")
-    difference: Optional[float] = None
-    if ai_value is not None and tutor_value is not None:
-        difference = round(ai_value - tutor_value, 2)
-    record["difference"] = difference
-
-    # needs_review rule (auto unless explicitly provided)
-    if "needs_review" in incoming:
-        record["needs_review"] = bool(incoming["needs_review"])
-    elif difference is not None and tutor_value not in (None, 0):
-        record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
-    else:
-        # Preserve existing value (if any) or default to False for new records
-        record["needs_review"] = bool(record.get("needs_review"))
-
-    # upsert by zid
-    updated = False
     for i, r in enumerate(data["marking_results"]):
         if not isinstance(r, dict):
             continue
-        if str(r.get("zid", "")).lower() == zid_norm and r.get("assignment_id") == aid:
-            # 保留原 created_at
-            if "created_at" in r and r["created_at"]:
-                record["created_at"] = r["created_at"]
-            else:
-                record.setdefault("created_at", _now_utc_iso())
-            data["marking_results"][i] = record
-            updated = True
+        same_zid = str(r.get("zid", "")).strip().lower() == zid_norm
+        same_aid = (r.get("assignment_id") == aid)
+        if same_zid and same_aid:
+            existing = r
+            existing_idx = i
             break
 
-    if not updated and aid is not None:
+    if existing is None and aid is not None:
         for i, r in enumerate(data["marking_results"]):
             if not isinstance(r, dict):
                 continue
-            if str(r.get("zid", "")).lower() == zid_norm and r.get("assignment_id") is None:
-                if "created_at" in r and r["created_at"]:
-                    record["created_at"] = r["created_at"]
-                else:
-                    record.setdefault("created_at", _now_utc_iso())
-                data["marking_results"][i] = record
-                updated = True
+            same_zid = str(r.get("zid", "")).strip().lower() == zid_norm
+            if same_zid and r.get("assignment_id") is None:
+                existing = r
+                existing_idx = i
                 break
-    if not updated:
-        record.setdefault("created_at", _now_utc_iso())
+
+    # Fallback: if no assignment_id provided, try match by (zid, assignment)
+    if existing is None and aid is None and ass:
+        for i, r in enumerate(data["marking_results"]):
+            if not isinstance(r, dict):
+                continue
+            same_zid = str(r.get("zid", "")).strip().lower() == zid_norm
+            same_ass = str(r.get("assignment", "")).strip() == ass
+            if same_zid and same_ass:
+                existing = r
+                existing_idx = i
+                break
+
+    record: Dict[str, Any] = dict(existing or {})
+    record.update(incoming)
+
+    record["zid"] = zid_raw or record.get("zid", "")
+    if aid is not None:
+        record["assignment_id"] = aid
+    elif (existing or {}).get("assignment_id") is not None:
+        record["assignment_id"] = (existing or {}).get("assignment_id")
+    record.setdefault("assignment", "")
+    record.setdefault("student_name", "")
+    record.setdefault("marked_by", "")
+
+    ai_value = to_float(record.get("ai_total"))
+    tutor_value = to_float(record.get("tutor_total"))
+    if ai_value is not None:
+        record["ai_total"] = ai_value
+    if tutor_value is not None:
+        record["tutor_total"] = tutor_value
+
+    if ai_value is not None and tutor_value is not None:
+        difference = round(ai_value - tutor_value, 2)
+        record["difference"] = difference
+    else:
+        difference = to_float(record.get("difference"))
+    new_status = record.get("review_status") or (existing or {}).get("review_status") or ""
+    record["review_status"] = new_status
+    is_reviewed = str(new_status).lower() in {"reviewed", "completed", "resolved", "checked"}
+
+    if is_reviewed:
+        record["needs_review"] = False
+    else:
+        if difference is not None and tutor_value not in (None, 0):
+            record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
+        else:
+            record["needs_review"] = bool(record.get("needs_review"))
+
+    now = _now_utc_iso()
+    record.setdefault("created_at", now)
+    record["updated_at"] = now
+
+    if existing_idx is not None:
+        data["marking_results"][existing_idx] = record
+    else:
         data["marking_results"].append(record)
+
     save_json_atomic(json_path, data)
     return MarkingOut(**record)

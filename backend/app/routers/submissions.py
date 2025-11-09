@@ -277,8 +277,20 @@ async def create_submission(
     db.commit()
     db.refresh(sub)
     if assignmentId and ai_assignment_paths:
-      enq = get_jobq().enqueue(assignmentId)
-      print(f"[AI][API] enqueue from create_submission: assignment_id={assignmentId}, files={len(ai_assignment_paths)}, enqueued={enq}")
+        enq = get_jobq().enqueue(assignmentId)
+        print(f"[AI][API] enqueue from create_submission: assignment_id={assignmentId}, files={len(ai_assignment_paths)}, enqueued={enq}")
+        # Mark course AI status as not completed while jobs are queued
+        try:
+            from .marking_result_manage import course_json_path_by_course, load_json, save_json_atomic
+            from .. import models as _models
+            course_obj = db.query(_models.Course).filter(_models.Course.code == course, _models.Course.term == (term or "")).limit(1).first()
+            if course_obj is not None:
+                json_path = course_json_path_by_course(course_obj)
+                data = load_json(json_path)
+                data["ai_completed"] = False
+                save_json_atomic(json_path, data)
+        except Exception:
+            pass
     return sub
 
 
@@ -310,8 +322,22 @@ async def append_files(
         student_id=(studentId or sub.student_id),
     )
     if stepIndex == 5 and sub.assignment_id:
-      enq = get_jobq().enqueue(sub.assignment_id)
-      print(f"[AI][API] enqueue from append_files: assignment_id={sub.assignment_id}, enqueued={enq}", flush=True)
+        enq = get_jobq().enqueue(sub.assignment_id)
+        print(f"[AI][API] enqueue from append_files: assignment_id={sub.assignment_id}, enqueued={enq}", flush=True)
+        # Mark course AI status as not completed while jobs are queued
+        try:
+            from .marking_result_manage import course_json_path_by_course, load_json, save_json_atomic
+            course_obj = db.get(models.Course, getattr(sub, 'course_id', None)) if hasattr(sub, 'course_id') else None
+            if course_obj is None:
+                # Fallback resolve by code+term
+                course_obj = db.query(models.Course).filter(models.Course.code == sub.course, models.Course.term == (sub.term or "")).limit(1).first()
+            if course_obj is not None:
+                json_path = course_json_path_by_course(course_obj)
+                data = load_json(json_path)
+                data["ai_completed"] = False
+                save_json_atomic(json_path, data)
+        except Exception:
+            pass
     if stepIndex == 6:
         for mark_path in saved_paths:
             try:

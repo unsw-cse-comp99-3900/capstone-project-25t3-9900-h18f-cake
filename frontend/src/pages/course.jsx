@@ -55,6 +55,22 @@ export default function CoursesPage() {
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedCourse, setSelectedCourse] = useState(null);
+    const [statusPollId, setStatusPollId] = useState(null);
+
+    // AI status per course id: { [id]: { loading: bool, aiCompleted: bool, error?: string } }
+    const [aiStatusById, setAiStatusById] = useState({});
+
+    const fetchCourseStatus = async (courseId) => {
+        if (!courseId) return;
+        setAiStatusById((prev) => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), loading: true, error: undefined } }));
+        try {
+            const data = await API.markingResults.status(courseId);
+            const aiCompleted = Boolean(data?.ai_completed);
+            setAiStatusById((prev) => ({ ...prev, [courseId]: { loading: false, aiCompleted } }));
+        } catch (e) {
+            setAiStatusById((prev) => ({ ...prev, [courseId]: { loading: false, aiCompleted: false, error: e?.message || "" } }));
+        }
+    };
 
     const grouped = useMemo(() => {
         return termCourse.reduce((acc, c) => {
@@ -120,11 +136,27 @@ export default function CoursesPage() {
     const openActions = (course) => {
         setSelectedCourse(course);
         setDialogOpen(true);
+        if (course?._id) {
+            // Optimistically set loading state so the View button is disabled immediately
+            setAiStatusById((prev) => ({ ...prev, [course._id]: { ...(prev[course._id] || {}), loading: true, aiCompleted: false } }));
+        }
+        // Fetch latest AI status for this course
+        fetchCourseStatus(course?._id);
+        // Start polling while dialog is open to keep status fresh
+        if (course?._id) {
+            if (statusPollId) clearInterval(statusPollId);
+            const id = setInterval(() => fetchCourseStatus(course._id), 5000);
+            setStatusPollId(id);
+        }
     };
 
     const closeActions = () => {
         setDialogOpen(false);
         setSelectedCourse(null);
+        if (statusPollId) {
+            clearInterval(statusPollId);
+            setStatusPollId(null);
+        }
     };
 
     const goUpload = () => {
@@ -143,18 +175,21 @@ export default function CoursesPage() {
             toast.error("Missing course identifier.");
             return;
         }
-        // try {
-        //     const status = await API.markingResults.status(c._id);
-        //     if (!status?.ai_completed) {
-        //         toast.info("AI results not finished yet. Please wait.");
-        //         return;
-        //     }
-        // } catch (err) {
-        //     toast.error(err?.message || "Failed to check AI results status.");
-        //     return;
-        // }
-
+        // Refresh status just before navigating to avoid stale cache
+        let freshDone = null;
+        try {
+            const fresh = await API.markingResults.status(c._id);
+            freshDone = !!fresh?.ai_completed;
+            setAiStatusById((prev) => ({ ...prev, [c._id]: { aiCompleted: freshDone, loading: false } }));
+        } catch (e) {
+            // if status check fails, be conservative and block navigation
+            freshDone = false;
+        }
         const term = c.term || c.year_term || "";
+        if (!freshDone) {
+            toast.info("AI is still grading for this course. Please try later.");
+            return;
+        }
         closeActions();
         navigate(
             `/airesult?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(term)}&courseId=${encodeURIComponent(c._id)}`,
@@ -258,7 +293,15 @@ export default function CoursesPage() {
                 course={pendingDelete}
             />
 
-            <CourseActionDialog open={dialogOpen} course={selectedCourse} onClose={closeActions} onUpload={goUpload} onView={goView} />
+            <CourseActionDialog
+                open={dialogOpen}
+                course={selectedCourse}
+                onClose={closeActions}
+                onUpload={goUpload}
+                onView={goView}
+                // status props to control the View button
+                viewStatus={selectedCourse ? aiStatusById[selectedCourse._id] : undefined}
+            />
 
             <ExitConfirmPopup
                 logoutOpen={logoutOpen}
