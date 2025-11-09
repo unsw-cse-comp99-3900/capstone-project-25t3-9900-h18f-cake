@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: cake-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      TZ: Australia/Sydney
+    volumes:
+      - ./backend:/app/backend
+      - ./AI:/app/AI
+      - ./backend/dev.db:/app/backend/dev.db
+    command: poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: cake-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: Australia/Sydney
+      REACT_APP_API_BASE_URL: "http://localhost:8000" 
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+
+networks:
+  default:
+    name: cake-network

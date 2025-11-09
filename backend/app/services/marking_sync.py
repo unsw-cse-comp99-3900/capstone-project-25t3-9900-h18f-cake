@@ -116,9 +116,11 @@ def sync_tutor_mark_from_file(
     if ai_total is not None and tutor_total is not None:
         difference = round(ai_total - tutor_total, 2)
 
-    needs_review = (
-        abs(difference) >= _REVIEW_DIFF_THRESHOLD if difference is not None else bool(existing and existing.get("needs_review"))
-    )
+    if ai_total is not None and tutor_total is not None:
+        denom = abs(tutor_total) if abs(tutor_total) > 1e-9 else 1.0
+        needs_review = (abs(ai_total - tutor_total) / denom) >= _REVIEW_DIFF_THRESHOLD
+    else:
+        needs_review = bool((existing or {}).get("needs_review"))
 
     payload = {
         "zid": zid,
@@ -214,9 +216,11 @@ def sync_ai_predictions_from_file(
         if ai_total is not None and tutor_total is not None:
             difference = round(ai_total - tutor_total, 2)
 
-        needs_review = (
-            abs(difference) >= _REVIEW_DIFF_THRESHOLD if difference is not None else bool((existing or {}).get("needs_review"))
-        )
+        if ai_total is not None and tutor_total is not None:
+            denom = abs(tutor_total) if abs(tutor_total) > 1e-9 else 1.0
+            needs_review = (abs(ai_total - tutor_total) / denom) >= _REVIEW_DIFF_THRESHOLD
+        else:
+            needs_review = bool(existing and existing.get("needs_review"))
 
         payload = {
             "zid": zid,

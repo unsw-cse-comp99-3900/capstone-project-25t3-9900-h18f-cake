@@ -1,15 +1,14 @@
-# ---- Build Stage ----
-FROM node:20-alpine AS builder
-
+FROM node:20
 WORKDIR /app
 
-# Copy only package files first for better caching
-COPY package*.json ./
+ARG REACT_APP_API_BASE_URL
+ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
 
-# Install dependencies (production only, no dev tools in final image)
-RUN npm install --frozen-lockfile
+COPY frontend/package.json frontend/package-lock.json* frontend/yarn.lock* ./
+RUN npm ci || npm install
 
-# Copy the rest of the source code
-COPY . .
+COPY frontend ./
 
-CMD ["npm", "run", "start"]
+EXPOSE 3000
+
+CMD ["npm", "start"]

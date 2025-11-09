@@ -18,17 +18,22 @@ class Settings(BaseSettings):
     postgres_host: str = Field(default="localhost", alias="POSTGRES_HOST")
     postgres_port: int = Field(default=5432, alias="POSTGRES_PORT")
 
+    # ---------- AI / OpenAI setting ----------
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+
     # ---------- upload setting ----------
     upload_root: Path = Field(default=Path("uploads"), alias="UPLOAD_ROOT")
     max_upload_mb: int = Field(default=50, alias="MAX_UPLOAD_MB")
     allowed_extensions: str = Field(default="pdf,doc,docx,txt", alias="ALLOWED_EXTENSIONS")
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
     }
+
     @property
-    def UPLOAD_ROOT(self) -> Path: 
+    def UPLOAD_ROOT(self) -> Path:
         return self.upload_root.resolve()
 
 settings = Settings()
