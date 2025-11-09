@@ -19,21 +19,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir poetry
-COPY backend/pyproject.toml backend/poetry.lock* ./backend/
-COPY backend/app ./backend/app
-COPY backend/README.md ./backend/README.md
-COPY AI ./AI
 
+# ---------- Backend dependencies (cached) ----------
 WORKDIR /app/backend
-
+COPY backend/pyproject.toml backend/poetry.lock* ./
 RUN poetry config virtualenvs.create false \
     && poetry install --no-interaction --no-ansi --no-root
+
+# ---------- AI dependencies (cached) ----------
 WORKDIR /app/AI
+COPY AI/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ---------- Application source ----------
 WORKDIR /app
 COPY backend ./backend
 COPY AI ./AI
+
 WORKDIR /app/backend
 EXPOSE 8000
 
