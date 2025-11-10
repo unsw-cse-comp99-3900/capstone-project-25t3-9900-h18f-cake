@@ -58,7 +58,7 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
 
                     {!aiCompleted && (
                         <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
-                            {loading ? "Checking AI status..." : (errorMsg ? `Status check failed: ${errorMsg}` : "AI is still grading for this course. You can view other courses meanwhile.")}
+                            {loading ? "Checking AI status..." : (errorMsg ? `Status check failed: ${errorMsg}` : "Results are still being prepared for this course. You can view other courses meanwhile.")}
                         </Typography>
                     )}
 
@@ -81,7 +81,7 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                             "&:hover": { bgcolor: "grey.300" }
                         }}
                     >
-                        {aiCompleted ? "View AI-generated grades" : ((loading || !viewStatus) ? "Loading status..." : "AI grading in progress")}
+                        {aiCompleted ? "View AI-generated grades" : ((loading || !viewStatus) ? "Loading status..." : "Results are still processing")}
                     </Button>
                 </Stack>
             </DialogContent>

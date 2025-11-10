@@ -187,7 +187,7 @@ export default function CoursesPage() {
         }
         const term = c.term || c.year_term || "";
         if (!freshDone) {
-            toast.info("AI is still grading for this course. Please try later.");
+            toast.info("Results are still being prepared for this course. Please try again shortly.");
             return;
         }
         closeActions();
