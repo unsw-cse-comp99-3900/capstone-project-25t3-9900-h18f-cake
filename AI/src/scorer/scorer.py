@@ -16,9 +16,18 @@ class TeacherGuidedScorer:
         self.output_dir = output_dir
         self.prompt_template = prompt_template
         os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(cfg.RUBRIC_DIR, exist_ok=True)
 
+        # if file does not exist, create it
+        if not os.path.exists(self.rubric_path):
+            with open(self.rubric_path, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
         with open(rubric_path, "r", encoding="utf-8") as f:
             self.rubric_schema = json.load(f)
+        # if file does not exist, create it
+        if not os.path.exists(self.teacher_style_path):
+            with open(self.teacher_style_path, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
         with open(teacher_style_path, "r", encoding="utf-8") as f:
             self.teacher_style = json.load(f)
         self.llm = LLMClient(model=cfg.LLM_MODEL)
@@ -117,10 +126,10 @@ class TeacherGuidedScorer:
 if __name__ == "__main__":
     prompt_path = os.path.join(cfg.PROMPT_DIR, "teacher_guided_scoring.md") 
     scorer = TeacherGuidedScorer(
-    rubric_path=cfg.RUBRIC_GENERATION_PATH,
-    teacher_style_path=cfg.RUBRIC_TEACHER_PATH,
-    output_dir=cfg.LLM_PREDICTION_DIR,
-    prompt_template=prompt_path
-)
+        rubric_path=cfg.RUBRIC_GENERATION_PATH,
+        teacher_style_path=cfg.RUBRIC_TEACHER_PATH,
+        output_dir=cfg.LLM_PREDICTION_DIR,
+        prompt_template=prompt_path
+    )
 
     scorer.process_folder(cfg.TEST_DIR,cfg.LLM_PREDICTION)
