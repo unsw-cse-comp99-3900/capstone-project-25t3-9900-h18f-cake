@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=120, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     # ---------- db setting ----------
-    sqlalchemy_dsn: str = Field(default="sqlite:///./dev.db", alias="SQLALCHEMY_DSN")
+    sqlalchemy_dsn: str = Field(default="sqlite:///./db/dev.db", alias="SQLALCHEMY_DSN")
     postgres_user: str | None = Field(default=None, alias="POSTGRES_USER")
     postgres_password: str | None = Field(default=None, alias="POSTGRES_PASSWORD")
     postgres_db: str | None = Field(default=None, alias="POSTGRES_DB")

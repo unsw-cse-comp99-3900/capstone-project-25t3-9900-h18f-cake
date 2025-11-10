@@ -18,8 +18,16 @@ class TeacherScoringAnalyzer:
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
 
+        # if file does not exist, create it
+        if not os.path.exists(self.summary_path):
+            with open(self.summary_path, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
         with open(self.summary_path, "r", encoding="utf-8") as f:
             self.data = json.load(f)
+        # if file does not exist, create it
+        if not os.path.exists(self.rubric_path):
+            with open(self.rubric_path, "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
         with open(self.rubric_path, "r", encoding="utf-8") as f:
             self.rubric_schema = json.load(f)
         # print(self.rubric_schema)
