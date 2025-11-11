@@ -119,7 +119,7 @@ function ReviewDashboard({ rows, courseId, onReviewed = () => {} }) {
 
             const remaining = Math.max(0, totalBefore - 1);
             if (remaining === 0) {
-                toast.success("🎉 All submissions have been reviewed!");
+                toast.success("All submissions have been reviewed!");
                 setCurrentIndex(0);
             } else {
                 setCurrentIndex((prev) => Math.min(prev, Math.max(0, remaining - 1)));
@@ -145,7 +145,7 @@ function ReviewDashboard({ rows, courseId, onReviewed = () => {} }) {
     if (needsReviewRows.length === 0) {
         return (
             <Alert severity="success" sx={{ mt: 2 }}>
-                No submissions require review at this time. All marks are within acceptable range.
+                No submissions require review at this time.
             </Alert>
         );
     }
@@ -264,7 +264,7 @@ function ReviewDashboard({ rows, courseId, onReviewed = () => {} }) {
                             {!!currentItem.feedback && (
                                 <Paper variant="outlined" sx={{ p: 2, bgcolor: "grey.50" }}>
                                     <Typography variant="h6" gutterBottom>AI Marking Feedback</Typography>
-                                    <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
+                                    <Typography variant="body1" sx={{ lineHeight: 1.6, whiteSpace: "pre-line" }}>
                                         {currentItem.feedback}
                                     </Typography>
                                 </Paper>
@@ -742,6 +742,7 @@ export default function Airesult() {
             "AI Mark",
             "Difference",
             "AI Feedback",
+            "Final Mark",
             "Revised Mark",
             "Revised Comments",
         ];
@@ -758,6 +759,9 @@ export default function Airesult() {
                 row.aiMark ?? "",
                 row.difference ?? "",
                 row.feedback ?? "",
+                row.reviewMark !== null && row.reviewMark !== undefined && row.reviewMark !== ""
+                    ? row.reviewMark
+                    : row.tutorMark ?? "",
                 row.reviewMark ?? "",
                 row.reviewComments ?? "",
             ]),
@@ -982,10 +986,10 @@ export default function Airesult() {
                                         }}
                                     >
                                         <ToggleButton value="studentView" aria-label="student view" type="button">
-                                            Main
+                                            TABLE
                                         </ToggleButton>
                                         <ToggleButton value="tutorView" aria-label="tutor view" type="button">
-                                            Tutor
+                                            CHART
                                         </ToggleButton>
                                     </ToggleButtonGroup>
                                 </Stack>
