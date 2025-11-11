@@ -203,8 +203,12 @@ def sync_ai_predictions_from_file(
                 "score": score,
                 "comment": val.get("comments"),
             }
-            if val.get("comments"):
-                feedback_parts.append(f"{key}: {val['comments']}")
+            score_text = f"score: {score}" if score is not None else "score: N/A"
+            comment = val.get("comments")
+            if comment:
+                feedback_parts.append(f"{key} ({score_text}) - {comment}")
+            else:
+                feedback_parts.append(f"{key} ({score_text})")
 
         ai_feedback = "\n".join(feedback_parts) if feedback_parts else None
         existing: Optional[Dict[str, Any]] = None
