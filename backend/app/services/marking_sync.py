@@ -15,6 +15,10 @@ from ..routers.marking_result_manage import (
     _now_utc_iso,
     _REVIEW_DIFF_THRESHOLD,
 )
+from ..services.system_log_service import record_system_log
+from ..logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def _to_float(value: Any) -> Optional[float]:
@@ -105,6 +109,14 @@ def sync_tutor_mark_from_file(
     mark_path = Path(mark_path)
     if not mark_path.exists():
         raise FileNotFoundError(f"Mark file not found: {mark_path}")
+    logger.info(
+        "tutor_mark_sync_start",
+        extra={
+            "submission_id": submission.id,
+            "assignment_id": submission.assignment_id,
+            "path": str(mark_path),
+        },
+    )
 
     extractor = TutorMarkExtractor()
     extracted = extractor.extract_marks(str(mark_path))
@@ -201,6 +213,14 @@ def sync_ai_predictions_from_file(
     data["term"] = course.term or ""
 
     updated_records: list[Dict[str, Any]] = []
+    logger.info(
+        "ai_prediction_sync_start",
+        extra={
+            "assignment_id": assignment_id,
+            "course_id": course.id,
+            "path": str(prediction_path),
+        },
+    )
     for item in predictions:
         zid_raw = (item.get("student_id") or "").lower()
         zid = zid_raw.split("_")[0]
@@ -282,4 +302,21 @@ def sync_ai_predictions_from_file(
         updated_records.append(record)
 
     save_json_atomic(json_path, data)
+    record_system_log(
+        db,
+        action="ai_marking.success",
+        message=f"AI marking completed for assignment '{assignment.title}'",
+        user_id=None,
+        course_id=course.id,
+        assignment_id=assignment_id,
+        metadata={"count": len(updated_records)},
+    )
+    logger.info(
+        "ai_prediction_sync_completed",
+        extra={
+            "assignment_id": assignment_id,
+            "course_id": course.id,
+            "count": len(updated_records),
+        },
+    )
     return {"updated": len(updated_records), "path": str(json_path)}

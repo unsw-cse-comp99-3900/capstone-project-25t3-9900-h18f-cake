@@ -9,6 +9,7 @@ from fastapi import UploadFile, File
 from app.db import get_db
 from app import models
 from app.deps import get_current_user, UserClaims
+from app.services.system_log_service import record_system_log
 
 
 
@@ -260,6 +261,7 @@ def append_marking_result(
     course_id: int,
     payload: MarkingIn,
     db: Session = Depends(get_db),
+    me: UserClaims = Depends(get_current_user),
 ):
     c = db.get(models.Course, course_id)
     if not c:
@@ -370,4 +372,18 @@ def append_marking_result(
         data["marking_results"].append(record)
 
     save_json_atomic(json_path, data)
+    record_system_log(
+        db,
+        action="mark_review.success",
+        message=f"Review completed for zid: {record.get('zid')} assignment: {record.get('assignment')}",
+        user_id=int(me.sub) if me and me.sub else None,
+        course_id=c.id,
+        assignment_id=record.get("assignment_id"),
+        metadata={
+            "zid": record.get("zid"),
+            "assignment": record.get("assignment"),
+            "review_mark": record.get("review_mark"),
+            "needs_review": record.get("needs_review"),
+        },
+    )
     return MarkingOut(**record)

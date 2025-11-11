@@ -124,3 +124,21 @@ class SubmissionFile(Base):
     uploaded_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     submission: Mapped["Submission"] = relationship("Submission", back_populates="files")
+
+
+class SystemLog(Base):
+    __tablename__ = "system_logs"
+
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    level = Column(String(16), default="INFO", nullable=False)
+    action = Column(String(128), nullable=False, index=True)
+    message = Column(Text, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)
+    assignment_id = Column(Integer, ForeignKey("assignments.id"), nullable=True)
+    metadata_json = Column(Text, nullable=True)
+
+    user = relationship("User", lazy="joined")
+    course = relationship("Course", lazy="joined")
+    assignment = relationship("Assignment", lazy="joined")
