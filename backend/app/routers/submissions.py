@@ -163,7 +163,7 @@ def _save_step_files(
     #         extractor = TutorMarkExtractor()
     #         extracted = extractor.extract_marks(str(dest))
 
-    #         # 构造 payload 与 MarkingIn 对齐
+    #         # Build payload aligned with the MarkingIn schema
     #         payload = {
     #             "zid": extracted["zid"],
     #             "tutor_marking_detail": extracted["tutor_marking_detail"],
@@ -173,7 +173,7 @@ def _save_step_files(
     #             "review_status": "unchecked"
     #         }
 
-    #         # 发送 POST 请求到本地 API
+    #         # Send POST request to the local API
     #         url = f"http://127.0.0.1:8000/v1/marking_result/{sub.assignment_id}/append"
     #         res = requests.post(url, json=payload)
     #         if res.status_code == 200:

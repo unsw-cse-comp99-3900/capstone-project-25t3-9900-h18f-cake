@@ -14,7 +14,7 @@ async def extract(file: UploadFile = File(...)):
     extractor = TeacherReportGenerator(loader)
 
     try:
-        # 临时保存上传文件
+        # Temporarily save uploaded files
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
             shutil.copyfileobj(file.file, tmp)
             tmp_path = tmp.name

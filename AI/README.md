@@ -81,16 +81,11 @@ python main.py --o 1                               # Teacher scoring pattern gen
 python main.py --o 2                               # Assignment prediction
 python main.py --o all                             # Whole progress
 
-更新github：
+Update GitHub workflow:
 git checkout ai_module
-拉取远程更新，同步到本地
 git pull origin ai_module
-显示修改文件
 git status
-添加修改文件
 git add .
-提交本地修改
-git commit -m "操作描述"
+git commit -m "describe changes"
 git push origin ai_module
-删除DS_Store
 git rm --cached .DS_Store

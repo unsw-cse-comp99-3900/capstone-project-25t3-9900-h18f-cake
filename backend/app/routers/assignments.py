@@ -44,7 +44,7 @@ def create_assignment_with_files(
     db: Session = Depends(get_db),
     me = Depends(get_current_user),
 ):
-    # ---------- 验证课程 ----------
+    # ---------- Validate course ----------
     norm_term = (term or "").strip() or None
     q = (
         db.query(models.Course)
@@ -58,10 +58,10 @@ def create_assignment_with_files(
     if not course_row:
         raise HTTPException(status_code=400, detail="Course not found")
 
-    # ---------- 创建 assignment ----------
+    # ---------- Create assignment ----------
     a = models.Assignment(course_id=course_row.id, title=title)
     db.add(a)
-    db.flush()  # 确保有 ID 可用于命名路径
+    db.flush()  # Ensure ID exists for naming paths
 
     base: Path = _assignment_dir(course, term, title, a.id)
     spec_dir = base / "spec"
@@ -69,7 +69,7 @@ def create_assignment_with_files(
     spec_dir.mkdir(parents=True, exist_ok=True)
     rubric_dir.mkdir(parents=True, exist_ok=True)
 
-    # ---------- 文件验证函数 ----------
+    # ---------- File validation helper ----------
     def _ensure_valid_file(u: UploadFile):
         allowed_exts = {".pdf", ".doc", ".docx"}
         allowed_types = {
@@ -87,21 +87,21 @@ def create_assignment_with_files(
             if head != b"%PDF-":
                 raise HTTPException(status_code=400, detail="Invalid PDF file signature")
 
-    # ---------- 验证并保存 spec ----------
+    # ---------- Validate & save specification ----------
     _ensure_valid_file(step1)
     spec_ext = Path(step1.filename).suffix.lower()
     spec_path = spec_dir / f"specification{spec_ext}"
     with open(spec_path, "wb") as f:
         shutil.copyfileobj(step1.file, f)
 
-    # ---------- 验证并保存 rubric ----------
+    # ---------- Validate & save rubric ----------
     _ensure_valid_file(step2)
     rubric_ext = Path(step2.filename).suffix.lower()
     rubric_path = rubric_dir / f"rubric{rubric_ext}"
     with open(rubric_path, "wb") as f:
         shutil.copyfileobj(step2.file, f)
 
-    # ---------- 保存 metadata ----------
+    # ---------- Save metadata ----------
     meta = {
         "assignment_id": a.id,
         "course": course,

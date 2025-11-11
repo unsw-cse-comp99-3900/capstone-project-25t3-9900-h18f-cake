@@ -105,7 +105,7 @@ class TeacherGuidedScorer:
                 }
                 all_results.append(record)
                 print(f"[DONE] {file_name} scored successfully.")
-                time.sleep(5)  # 防止 API rate limit
+                time.sleep(5)  # Avoid hitting API rate limits
             except Exception as e:
                 print(f"[ERROR] Failed {file_name}: {e}")
         os.makedirs(os.path.dirname(output_path), exist_ok=True)

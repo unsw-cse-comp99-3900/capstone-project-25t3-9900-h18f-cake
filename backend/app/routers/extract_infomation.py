@@ -72,8 +72,8 @@ def _post_marking_result(assignment_id: int, payload: Dict[str, Any]) -> Dict[st
 @router.post("/extract")
 def extract_and_update_marks(path: str, assignment_id: int):
     """
-    定位 Student_assignment_with_Tutor_mark 目录，解析其中的 tutor 打分文件，
-    并调用 marking_result append 接口进行更新。
+    Locate the Student_assignment_with_Tutor_mark directory, parse tutor score files,
+    and call the marking_result append endpoint to update the data.
     """
     mark_dir = _resolve_tutor_mark_dir(path)
     files = _collect_mark_files(mark_dir)

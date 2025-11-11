@@ -25,7 +25,7 @@ except Exception as exc:  # pragma: no cover - log friendly fallback
     PaddleOCR = None
     paddle = None
     _PADDLE_IMPORT_ERROR = exc
-# OCR 依赖（可选）
+# Optional OCR dependencies
 try:
     import fitz  # PyMuPDF
     from PIL import Image
@@ -41,7 +41,7 @@ class DataLoader:
         ocr_language: str = "en",
         min_chars: int = 20,
         alpha_ratio: float = 0.05,
-        dpi: int = 72,#OCR 渲染清晰度【尝试过了 足够了 再大提取不出来了】
+        dpi: int = 72,  # OCR render resolution (higher values showed no benefit)
         min_conf = 0.7,
         max_pages: Optional[int] = None,
     ):
@@ -120,7 +120,7 @@ class DataLoader:
                         "source": "archive_extract"
                     })
 
-            # 匹配 figure caption（可选）
+            # Optionally match figure captions
             para_texts = [p.text.strip() for p in file.paragraphs]
             for img in images:
                 for txt in para_texts:
@@ -143,7 +143,7 @@ class DataLoader:
         except Exception:
             return ""
         
-    def file_scanned(self, text): #whether scanned
+    def file_scanned(self, text):  # Determine whether the document is scanned
         if not text or len(text) < self.min_chars:
             return True
         readable = sum(ch.isalnum() or ("\u4e00" <= ch <= "\u9fff") for ch in text)
