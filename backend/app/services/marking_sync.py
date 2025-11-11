@@ -24,6 +24,24 @@ def _to_float(value: Any) -> Optional[float]:
         return None
 
 
+def _format_score_text(score: Optional[float]) -> str:
+    if score is None:
+        return "score: N/A"
+    value = float(score)
+    if value.is_integer():
+        return f"score: {int(value)}"
+    return f"score: {round(value, 2)}"
+
+
+def _pretty_label(raw: Any) -> str:
+    if raw is None:
+        return "component"
+    label = str(raw).replace("_", " ").strip()
+    while "  " in label:
+        label = label.replace("  ", " ")
+    return label or "component"
+
+
 def _resolve_course(db: Session, submission: models.Submission) -> models.Course:
     course: Optional[models.Course] = None
 
@@ -203,14 +221,15 @@ def sync_ai_predictions_from_file(
                 "score": score,
                 "comment": val.get("comments"),
             }
-            score_text = f"score: {score}" if score is not None else "score: N/A"
+            readable_label = _pretty_label(key)
+            score_text = _format_score_text(score)
             comment = val.get("comments")
+            line = f"{readable_label} ({score_text})"
             if comment:
-                feedback_parts.append(f"{key} ({score_text}) - {comment}")
-            else:
-                feedback_parts.append(f"{key} ({score_text})")
+                line = f"{line} - {comment}"
+            feedback_parts.append(line)
 
-        ai_feedback = "\n".join(feedback_parts) if feedback_parts else None
+        ai_feedback = f"{'\n'.join(feedback_parts)}\n" if feedback_parts else None
         existing: Optional[Dict[str, Any]] = None
         for r in data["marking_results"]:
             if not isinstance(r, dict):
