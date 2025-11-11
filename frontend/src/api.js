@@ -51,6 +51,19 @@ export const markingResults = {
         }),
 };
 
+export const systemLogs = {
+    list: (params = {}) => {
+        const search = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== "") {
+                search.append(key, value);
+            }
+        });
+        const suffix = search.toString();
+        return GET(`/v1/system_logs/${suffix ? `?${suffix}` : ""}`);
+    },
+};
+
 export const health = {
     ping: () => GET("/health"),
 };
@@ -124,6 +137,7 @@ const API = {
     assignments,
     submissions,
     markingResults,
+    systemLogs,
     getToken,
     setToken,
     clearToken,

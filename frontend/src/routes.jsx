@@ -6,6 +6,7 @@ import RegisterMain from "./pages/register";
 import { AuthProvider, useAuth } from "./context/auth-context";
 import { Toaster } from "sonner";
 import Airesult from "./pages/airesult";
+import AdminLogsPage from "./pages/admin-logs";
 
 function Private({ children }) {
     const { token } = useAuth();
@@ -59,6 +60,14 @@ export default function PageRoutes() {
                         element={
                             <Private>
                                 <Airesult />
+                            </Private>
+                        }
+                    />
+                    <Route
+                        path="/admin/logs"
+                        element={
+                            <Private>
+                                <AdminLogsPage />
                             </Private>
                         }
                     />

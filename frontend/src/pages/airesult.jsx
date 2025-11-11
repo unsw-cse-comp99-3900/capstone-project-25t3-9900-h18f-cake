@@ -6,7 +6,7 @@ import {
     Paper, Button, Chip, Alert, Card, CardContent, TextField,
 } from "@mui/material";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import RateReviewIcon from "@mui/icons-material/RateReview";
 import FlagIcon from "@mui/icons-material/Flag";
@@ -707,7 +707,7 @@ export default function Airesult() {
 
             setRows((prev) => prev.map((row) => (rowsMatchByIdentity(row, newRow) ? patchedRow : row)));
 
-            toast.success(`Revised details updated for ${newRow.studentName || newRow.zid}`);
+            toast.success(`Review has been updated for ${newRow.studentName || newRow.zid}`);
             return patchedRow;
         },
         [courseId]
@@ -836,7 +836,7 @@ export default function Airesult() {
                     <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }} alignItems="center">
                         <Tooltip title="Back to Course Page" arrow>
                             <IconButton onClick={() => navigate("/courses", { replace: true })}>
-                                <ArrowBackIcon sx={{ fontSize: 32 }} />
+                                <ExitToAppIcon sx={{ fontSize: 32 }} />
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="Dashboard view" arrow>

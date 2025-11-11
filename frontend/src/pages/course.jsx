@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
-import { Box, Stack, Grid, IconButton, Typography } from "@mui/material";
+import { Box, Stack, Grid, IconButton, Typography, Tooltip } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import CourseCard from "../component/course-card";
 import CourseAdd from "../component/course-add";
 import CourseDelete from "../component/course-delete";
@@ -253,6 +254,17 @@ export default function CoursesPage() {
                         >
                             <PowerSettingsNewIcon />
                         </IconButton>
+                        <Tooltip title="System logs (admin)">
+                            <IconButton
+                                sx={headerIconSx}
+                                aria-label="view system logs"
+                                onClick={() => {
+                                    navigate("/admin/logs");
+                                }}
+                            >
+                                <ReceiptLongIcon />
+                            </IconButton>
+                        </Tooltip>
                     </>
                 </Stack>
             </Stack>
