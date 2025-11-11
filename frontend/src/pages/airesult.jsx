@@ -10,6 +10,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import FlagIcon from "@mui/icons-material/Flag";
 import AddTaskIcon from "@mui/icons-material/AddTask";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import DownloadIcon from "@mui/icons-material/Download";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
 import API from "../api";
@@ -565,6 +566,67 @@ export default function Airesult() {
         [filteredRows]
     );
 
+    const handleDownloadCsv = useCallback(() => {
+        if (!rowsForUI.length) {
+            toast.info("No dashboard data available to download.");
+            return;
+        }
+
+        const formatCell = (value) => {
+            if (value === null || value === undefined) return "";
+            const str = String(value).replace(/\r?\n/g, " ").trim();
+            return /[",]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+        };
+
+        const headers = [
+            "Student ID",
+            "zID",
+            "Student Name",
+            "Assignment",
+            "Marked By",
+            "Tutor Mark",
+            "AI Mark",
+            "Difference",
+            "AI Feedback",
+            "Revised Mark",
+            "Revised Comments",
+        ];
+
+        const lines = [
+            headers,
+            ...rowsForUI.map((row) => [
+                row.studentID ?? "",
+                row.zid ?? "",
+                row.studentName ?? "",
+                row.assignment ?? "",
+                row.markBy ?? "",
+                row.tutorMark ?? "",
+                row.aiMark ?? "",
+                row.difference ?? "",
+                row.feedback ?? "",
+                row.reviewMark ?? "",
+                row.reviewComments ?? "",
+            ]),
+        ];
+
+        const csv = lines.map((line) => line.map(formatCell).join(",")).join("\r\n");
+        const safeCourse = (course || "course").replace(/\s+/g, "_");
+        const safeTerm = (term || "term").replace(/\s+/g, "_");
+        const stamp = new Date().toISOString().split("T")[0];
+        const filename = `dashboard_${safeCourse}_${safeTerm}_${stamp}.csv`;
+
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success("Dashboard data downloaded.");
+    }, [rowsForUI, course, term]);
+
     return (
         <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
             {/* ── Title bar ── */}
@@ -668,15 +730,21 @@ export default function Airesult() {
                             {/* Filters & toggles */}
                             <Stack
                                 direction={{ xs: "column", md: "row" }}
-                                alignItems={{ xs: "flex-start", md: "center" }}
+                                alignItems={{ xs: "stretch", md: "center" }}
                                 justifyContent="space-between"
                                 sx={{ mb: 2, gap: 2, flexShrink: 0, width: "100%" }}
                             >
                                 <Stack
-                                    direction="row"
+                                    direction={{ xs: "column", lg: "row" }}
                                     spacing={2}
                                     alignItems="center"
-                                    sx={{ width: "100%", justifyContent: "center", mb: 1 }}
+                                    flexWrap="wrap"
+                                    sx={{
+                                        width: "100%",
+                                        justifyContent: { xs: "flex-start", lg: "flex-start" },
+                                        mb: { xs: 1, md: 0 },
+                                        "& > *": { flexGrow: { xs: 1, lg: 0 } },
+                                    }}
                                 >
                                     <FormControl size="small" sx={{ minWidth: 220 }}>
                                         <InputLabel id="assignment-select-label">Choose assignment</InputLabel>
@@ -729,6 +797,21 @@ export default function Airesult() {
                                         </ToggleButton>
                                     </ToggleButtonGroup>
                                 </Stack>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    startIcon={<DownloadIcon />}
+                                    onClick={handleDownloadCsv}
+                                    disabled={!rowsForUI.length}
+                                    sx={{
+                                        alignSelf: { xs: "stretch", md: "center" },
+                                        textTransform: "none",
+                                        fontWeight: 600,
+                                        minWidth: { md: 200 },
+                                    }}
+                                >
+                                    Download CSV
+                                </Button>
                             </Stack>
 
                             {/* Content area */}
