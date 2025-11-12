@@ -1,25 +1,27 @@
+import json
+import os
 import re
+from typing import Any, Dict, Optional
+
 import fitz
 from docx import Document
-import os
-import json
-from typing import Dict, Any, Optional
+
 
 class TutorMarkExtractor:
     def __init__(self):
-        # 匹配每个评分项
+        # Match each rubric item
         self.pattern = re.compile(
             r"([A-Z][A-Za-z &/]+)[:：]\s*([0-9]+(?:\.[0-9]+)?)\s*/\s*([0-9]+(?:\.[0-9]+)?)(?:\s*marks?)?",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
-        # 匹配总分
+        # Match total score
         self.total_pattern = re.compile(
             r"Total\s*Mark[:：]?\s*([0-9]+(?:\.[0-9]+)?)\s*/\s*([0-9]+(?:\.[0-9]+)?)",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
     def load_text(self, file_path: str) -> str:
-        """读取 docx 或 pdf 文件"""
+        """Read docx or pdf files"""
         ext = os.path.splitext(file_path)[1].lower()
         if ext in [".docx", ".doc"]:
             doc = Document(file_path)
@@ -32,46 +34,40 @@ class TutorMarkExtractor:
         return text
 
     def extract_marks(self, file_path: str) -> Dict[str, Any]:
-        """提取每个分项和总分"""
+        """Extract each rubric component and totals"""
         text = self.load_text(file_path)
         tutor_detail = {}
 
-        # 分项
+        # Per-component scores
         for match in self.pattern.findall(text):
             name, got, total = match
             name = name.strip().replace("\n", " ")
-            tutor_detail[name] = {
-                "score": float(got),
-                "total": float(total)
-            }
+            tutor_detail[name] = {"score": float(got), "total": float(total)}
 
-        # 总分
+        # Overall total
         tutor_total = None
         total_match = self.total_pattern.search(text)
         if total_match:
             got, total = total_match.groups()
             tutor_total = float(got)
-            tutor_detail["Total Mark"] = {
-                "score": float(got),
-                "total": float(total)
-            }
+            tutor_detail["Total Mark"] = {"score": float(got), "total": float(total)}
 
-        # === 组装为符合 MarkingIn schema 的结构 ===
+        # Assemble result that matches the MarkingIn schema
         result = {
-            "zid": os.path.basename(file_path).split("_")[0],  # 从文件名提取 zID
+            "zid": os.path.basename(file_path).split("_")[
+                0
+            ],  # Extract zID from the filename
             "tutor_marking_detail": tutor_detail,
             "tutor_total": tutor_total,
             "marked_by": "tutor",
-            "needs_review": False
+            "needs_review": False,
         }
 
         return result
 
 
-
-
 # if __name__ == "__main__":
-#     # 可以改成自己本地的文件路径
+#     # Update this path to point to a local file when testing
 #     test_file = "./uploads/comp0110-2077-term-2/ass1-5/submissions/Student_assignment_with_Tutor_mark/z5864533/z5864533_mark.docx"
 
 #     if not os.path.exists(test_file):

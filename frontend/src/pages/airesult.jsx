@@ -6,10 +6,13 @@ import {
     Paper, Button, Chip, Alert, Card, CardContent, TextField,
 } from "@mui/material";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import RateReviewIcon from "@mui/icons-material/RateReview";
 import FlagIcon from "@mui/icons-material/Flag";
 import AddTaskIcon from "@mui/icons-material/AddTask";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import DownloadIcon from "@mui/icons-material/Download";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
 import API from "../api";
@@ -17,10 +20,41 @@ import API from "../api";
 import DashboardStudent from "../component/dashboard-1-main";
 import DashboardTutorScatter from "../component/dashboard-2-tutor-scatter";
 import ExitConfirmPopup from "../component/exit-confirm";
-import Sidebar, { SIDEBAR_WIDTH } from "../component/sidebar";
 import { toast } from "sonner";
 
 const TOPBAR_HEIGHT = 72;
+
+const makeRowKey = (zid, assignmentId, assignment) => {
+    const assignmentKey = assignmentId ?? assignment ?? "unassigned";
+    return `${zid}-${assignmentKey}`;
+};
+
+const parseReviewMark = (value) => {
+    if (value === "" || value === null || value === undefined) return "";
+    const num = Number(value);
+    if (Number.isNaN(num)) return "";
+    return Number(num.toFixed(2));
+};
+
+const clampReviewMark = (value) => {
+    if (value === "" || value === null || value === undefined) {
+        throw new Error("Revised mark cannot be empty");
+    }
+    const num = Number(value);
+    if (Number.isNaN(num)) {
+        throw new Error("Revised mark must be a valid number");
+    }
+    return Math.max(0, Math.min(100, Number(num.toFixed(2))));
+};
+
+const rowsMatchByIdentity = (row, target) => {
+    if (!row || !target) return false;
+    if (row.zid !== target.zid) return false;
+    if (target.assignmentId !== null && target.assignmentId !== undefined) {
+        return row.assignmentId === target.assignmentId;
+    }
+    return (row.assignment || "") === (target.assignment || "");
+};
 
 /** ─────────────────────────────────────────────────────────────────────────────
  * ReviewDashboard
@@ -85,7 +119,7 @@ function ReviewDashboard({ rows, courseId, onReviewed = () => {} }) {
 
             const remaining = Math.max(0, totalBefore - 1);
             if (remaining === 0) {
-                toast.success("🎉 All submissions have been reviewed!");
+                toast.success("All submissions have been reviewed!");
                 setCurrentIndex(0);
             } else {
                 setCurrentIndex((prev) => Math.min(prev, Math.max(0, remaining - 1)));
@@ -111,7 +145,7 @@ function ReviewDashboard({ rows, courseId, onReviewed = () => {} }) {
     if (needsReviewRows.length === 0) {
         return (
             <Alert severity="success" sx={{ mt: 2 }}>
-                No submissions require review at this time. All marks are within acceptable range.
+                No submissions require review at this time.
             </Alert>
         );
     }
@@ -230,7 +264,7 @@ function ReviewDashboard({ rows, courseId, onReviewed = () => {} }) {
                             {!!currentItem.feedback && (
                                 <Paper variant="outlined" sx={{ p: 2, bgcolor: "grey.50" }}>
                                     <Typography variant="h6" gutterBottom>AI Marking Feedback</Typography>
-                                    <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
+                                    <Typography variant="body1" sx={{ lineHeight: 1.6, whiteSpace: "pre-line" }}>
                                         {currentItem.feedback}
                                     </Typography>
                                 </Paper>
@@ -314,6 +348,7 @@ export default function Airesult() {
     const [aiCompleted, setAiCompleted] = useState(true);
     const [statusChecking, setStatusChecking] = useState(false);
     const statusPollRef = useRef(null);
+    const [selectedRowIds, setSelectedRowIds] = useState([]);
 
     // Check per-course AI status; poll until completed
     useEffect(() => {
@@ -417,6 +452,7 @@ export default function Airesult() {
                     const needsReview = reviewedDone ? false : item.needs_review === true;
                     const zid = item.zid ? String(item.zid) : `z${index + 1}`;
                     const studentIdValue = zid.replace(/^z/i, "") || zid;
+                    const rowKey = makeRowKey(zid, item.assignment_id, item.assignment);
 
                     return {
                         studentID: studentIdValue,
@@ -430,11 +466,12 @@ export default function Airesult() {
                         assignment: item.assignment || "Unassigned",
                         assignmentId: item.assignment_id ?? null,
                         needsReview,
-                        reviewMark: item.review_mark ?? "",
+                        reviewMark: parseReviewMark(item.review_mark),
                         reviewComments: item.review_comments ?? "",
                         reviewStatus: item.review_status || "pending",
                         _reviewedDone: reviewedDone,
                         _raw: item,
+                        rowKey,
                     };
                 });
 
@@ -466,6 +503,7 @@ export default function Airesult() {
                 });
 
                 setRows(mapped);
+                setSelectedRowIds([]);
                 setCourse((prev) => prev || data?.course || "");
                 setTerm((prev) => prev || data?.term || "");
             })
@@ -492,6 +530,8 @@ export default function Airesult() {
     const handleReviewed = useCallback(
         ({ zid, assignmentId, assignment, reviewMark, reviewComments }) => {
             if (!zid) return;
+            const sanitizedMark =
+                reviewMark === undefined ? undefined : reviewMark === "" ? "" : parseReviewMark(reviewMark);
             setRows((prev) =>
                 prev.map((row) => {
                     if (row.zid !== zid) return row;
@@ -505,7 +545,8 @@ export default function Airesult() {
                     return {
                         ...row,
                         needsReview: false,
-                        reviewMark: reviewMark ?? row.reviewMark,
+                        reviewMark:
+                            sanitizedMark === undefined ? row.reviewMark : sanitizedMark,
                         reviewComments: reviewComments ?? row.reviewComments,
                         reviewStatus: "completed",
                     };
@@ -565,24 +606,216 @@ export default function Airesult() {
         [filteredRows]
     );
 
+    useEffect(() => {
+        setSelectedRowIds((prev) => {
+            if (!prev.length) return prev;
+            const valid = new Set(rowsForUI.map((row) => row.rowKey));
+            const next = prev.filter((id) => valid.has(id));
+            return next.length === prev.length ? prev : next;
+        });
+    }, [rowsForUI]);
+
+    const visibleRowIds = useMemo(() => rowsForUI.map((row) => row.rowKey), [rowsForUI]);
+
+    const toggleRowSelection = useCallback((rowKey) => {
+        if (!rowKey) return;
+        setSelectedRowIds((prev) =>
+            prev.includes(rowKey) ? prev.filter((id) => id !== rowKey) : [...prev, rowKey]
+        );
+    }, []);
+
+    const toggleAllVisibleRows = useCallback(() => {
+        if (!visibleRowIds.length) return;
+        setSelectedRowIds((prev) => {
+            const allVisibleSelected = visibleRowIds.every((id) => prev.includes(id));
+            if (allVisibleSelected) {
+                return prev.filter((id) => !visibleRowIds.includes(id));
+            }
+            const union = new Set([...prev, ...visibleRowIds]);
+            return Array.from(union);
+        });
+    }, [visibleRowIds]);
+
+    const selectionConfig = useMemo(() => {
+        const hasVisibleRows = visibleRowIds.length > 0;
+        const allVisibleSelected = hasVisibleRows && visibleRowIds.every((id) => selectedRowIds.includes(id));
+        const anyVisibleSelected = hasVisibleRows && visibleRowIds.some((id) => selectedRowIds.includes(id));
+        return {
+            selectedIds: selectedRowIds,
+            allSelected: allVisibleSelected,
+            indeterminate: anyVisibleSelected && !allVisibleSelected,
+            onToggleRow: toggleRowSelection,
+            onToggleAll: toggleAllVisibleRows,
+            disableToggleAll: !hasVisibleRows,
+        };
+    }, [selectedRowIds, visibleRowIds, toggleRowSelection, toggleAllVisibleRows]);
+
+    const handleInlineReviewUpdate = useCallback(
+        async (newRow, oldRow) => {
+            const newMarkRaw = newRow.reviewMark;
+            const oldMarkRaw = oldRow.reviewMark;
+            const newComments = newRow.reviewComments ?? "";
+            const oldComments = oldRow.reviewComments ?? "";
+            const markChanged = newMarkRaw !== oldMarkRaw;
+            const commentsChanged = newComments !== oldComments;
+
+            if (!markChanged && !commentsChanged) {
+                return oldRow;
+            }
+
+            if (!courseId) {
+                const error = new Error("Missing course information");
+                toast.error(error.message);
+                throw error;
+            }
+
+            if (
+                !markChanged &&
+                (oldMarkRaw === "" || oldMarkRaw === null || oldMarkRaw === undefined)
+            ) {
+                const error = new Error("Please set a revised mark before editing comments.");
+                toast.error(error.message);
+                throw error;
+            }
+
+            const sanitizedMark = clampReviewMark(markChanged ? newMarkRaw : oldMarkRaw);
+            const normalizedComments = commentsChanged ? newComments : oldComments;
+
+            const payload = {
+                zid: newRow.zid,
+                assignment: newRow.assignment ?? "",
+                ...(newRow.assignmentId != null ? { assignment_id: newRow.assignmentId } : {}),
+                review_mark: sanitizedMark,
+                review_comments: normalizedComments,
+                review_status: "reviewed",
+            };
+
+            try {
+                await API.markingResults.upsert(courseId, payload);
+            } catch (error) {
+                throw error instanceof Error ? error : new Error("Failed to save revised mark");
+            }
+
+            const patchedRow = {
+                ...oldRow,
+                ...newRow,
+                reviewMark: markChanged ? sanitizedMark : oldRow.reviewMark,
+                reviewComments: normalizedComments,
+                needsReview: false,
+                reviewStatus: "completed",
+            };
+
+            setRows((prev) => prev.map((row) => (rowsMatchByIdentity(row, newRow) ? patchedRow : row)));
+
+            toast.success(`Review has been updated for ${newRow.studentName || newRow.zid}`);
+            return patchedRow;
+        },
+        [courseId]
+    );
+
+    const handleInlineReviewError = useCallback((error) => {
+        const message = error?.message || "Failed to save revised mark";
+        toast.error(message);
+    }, []);
+
+    const handleDownloadCsv = useCallback(() => {
+        const rowsToExport = rowsForUI.filter((row) => selectedRowIds.includes(row.rowKey));
+
+        if (!rowsToExport.length) {
+            toast.info("Select at least one row to download.");
+            return;
+        }
+
+        const formatCell = (value) => {
+            if (value === null || value === undefined) return "";
+            const str = String(value).replace(/\r?\n/g, " ").trim();
+            return /[",]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+        };
+
+        const headers = [
+            "Student ID",
+            "zID",
+            "Student Name",
+            "Assignment",
+            "Marked By",
+            "Tutor Mark",
+            "AI Mark",
+            "Difference",
+            "AI Feedback",
+            "Final Mark",
+            "Revised Mark",
+            "Revised Comments",
+        ];
+
+        const lines = [
+            headers,
+            ...rowsToExport.map((row) => [
+                row.studentID ?? "",
+                row.zid ?? "",
+                row.studentName ?? "",
+                row.assignment ?? "",
+                row.markBy ?? "",
+                row.tutorMark ?? "",
+                row.aiMark ?? "",
+                row.difference ?? "",
+                row.feedback ?? "",
+                row.reviewMark !== null && row.reviewMark !== undefined && row.reviewMark !== ""
+                    ? row.reviewMark
+                    : row.tutorMark ?? "",
+                row.reviewMark ?? "",
+                row.reviewComments ?? "",
+            ]),
+        ];
+
+        const csv = lines.map((line) => line.map(formatCell).join(",")).join("\r\n");
+        const safeCourse = (course || "course").replace(/\s+/g, "_");
+        const safeTerm = (term || "term").replace(/\s+/g, "_");
+        const stamp = new Date().toISOString().split("T")[0];
+        const filename = `dashboard_${safeCourse}_${safeTerm}_${stamp}.csv`;
+
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success("Dashboard data downloaded.");
+    }, [rowsForUI, course, term, selectedRowIds]);
+
     return (
-        <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <Box
+            sx={{
+                minHeight: "100vh",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+            }}
+        >
             {/* ── Title bar ── */}
             <Box
                 sx={{
                     position: "sticky",
                     top: 0,
-                    height: TOPBAR_HEIGHT,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    px: { xs: 2, md: 5 },
+                    zIndex: (theme) => theme.zIndex.drawer + 1,
                     borderBottom: "1px solid",
                     borderColor: "divider",
                     bgcolor: "background.paper",
-                    zIndex: (theme) => theme.zIndex.drawer + 1,
+                    flexShrink: 0,
                 }}
             >
+                <Box
+                    sx={{
+                        height: TOPBAR_HEIGHT,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        pl: { xs: 2, md: 4 },
+                        pr: { xs: 2, md: 5 },
+                    }}
+                >
                 <Typography
                     variant="h4"
                     sx={{
@@ -600,39 +833,64 @@ export default function Airesult() {
                     {course} {term}
                 </Typography>
 
-                <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }} alignItems="center">
-                    <Tooltip title="Back to Course Page" arrow>
-                        <IconButton onClick={() => navigate("/courses", { replace: true })}>
-                            <ArrowBackIcon sx={{ fontSize: 32 }} />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Logout" arrow>
-                        <IconButton onClick={() => setLogoutOpen(true)}>
-                            <PowerSettingsNewIcon sx={{ fontSize: 32 }} />
-                        </IconButton>
-                    </Tooltip>
-                </Stack>
+                    <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }} alignItems="center">
+                        <Tooltip title="Back to Course Page" arrow>
+                            <IconButton onClick={() => navigate("/courses", { replace: true })}>
+                                <ExitToAppIcon sx={{ fontSize: 32 }} />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Dashboard view" arrow>
+                            <IconButton
+                                color={dashboardOpen === "dashboard" ? "primary" : "default"}
+                                onClick={() => setDashboardOpen("dashboard")}
+                                aria-label="Open dashboard view"
+                            >
+                                <DashboardIcon sx={{ fontSize: 32 }} />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Review view" arrow>
+                            <IconButton
+                                color={dashboardOpen === "review" ? "primary" : "default"}
+                                onClick={() => setDashboardOpen("review")}
+                                aria-label="Open review view"
+                            >
+                                <RateReviewIcon sx={{ fontSize: 32 }} />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Logout" arrow>
+                            <IconButton onClick={() => setLogoutOpen(true)}>
+                                <PowerSettingsNewIcon sx={{ fontSize: 32 }} />
+                            </IconButton>
+                        </Tooltip>
+                    </Stack>
+                </Box>
             </Box>
 
-            {/* ── Sidebar + Main content ── */}
-            <Box sx={{ display: "flex", flexGrow: 1 }}>
-                <Sidebar topOffset={TOPBAR_HEIGHT} setDashboardOpen={setDashboardOpen} />
-
+            {/* ── Main content ── */}
+            <Box
+                sx={{
+                    display: "flex",
+                    flexGrow: 1,
+                    alignItems: "stretch",
+                    minHeight: { xs: "auto", md: `calc(100vh - ${TOPBAR_HEIGHT}px)` },
+                    overflow: "hidden",
+                }}
+            >
                 <Box
                     component="main"
                     sx={{
                         flexGrow: 1,
-                        ml: { md: `${SIDEBAR_WIDTH}px` },
-                        width: { xs: "100%", md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
-                        height: `calc(100vh - ${TOPBAR_HEIGHT}px)`,
+                        width: "100%",
+                        height: { xs: "auto", md: `calc(100vh - ${TOPBAR_HEIGHT}px)` },
+                        minHeight: 0,
                         display: "flex",
                         flexDirection: "column",
                         pt: 4,
-                        px: 4,
-                        maxWidth: "90vw",
-                        overflowY: "auto",
+                        pb: 4,
+                        px: { xs: 2, md: 4 },
+                        overflow: "hidden",
+                        backgroundColor: "background.default",
                         scrollBehavior: "smooth",
-                        mx: "auto",
                     }}
                 >
                     <ExitConfirmPopup
@@ -668,15 +926,21 @@ export default function Airesult() {
                             {/* Filters & toggles */}
                             <Stack
                                 direction={{ xs: "column", md: "row" }}
-                                alignItems={{ xs: "flex-start", md: "center" }}
+                                alignItems={{ xs: "stretch", md: "center" }}
                                 justifyContent="space-between"
                                 sx={{ mb: 2, gap: 2, flexShrink: 0, width: "100%" }}
                             >
                                 <Stack
-                                    direction="row"
+                                    direction={{ xs: "column", lg: "row" }}
                                     spacing={2}
                                     alignItems="center"
-                                    sx={{ width: "100%", justifyContent: "center", mb: 1 }}
+                                    flexWrap="wrap"
+                                    sx={{
+                                        width: "100%",
+                                        justifyContent: { xs: "flex-start", lg: "flex-start" },
+                                        mb: { xs: 1, md: 0 },
+                                        "& > *": { flexGrow: { xs: 1, lg: 0 } },
+                                    }}
                                 >
                                     <FormControl size="small" sx={{ minWidth: 220 }}>
                                         <InputLabel id="assignment-select-label">Choose assignment</InputLabel>
@@ -722,33 +986,63 @@ export default function Airesult() {
                                         }}
                                     >
                                         <ToggleButton value="studentView" aria-label="student view" type="button">
-                                            Main
+                                            TABLE
                                         </ToggleButton>
                                         <ToggleButton value="tutorView" aria-label="tutor view" type="button">
-                                            Tutor
+                                            CHART
                                         </ToggleButton>
                                     </ToggleButtonGroup>
                                 </Stack>
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        startIcon={<DownloadIcon />}
+                                        onClick={handleDownloadCsv}
+                                        disabled={!selectedRowIds.length}
+                                        sx={{
+                                            alignSelf: { xs: "stretch", md: "center" },
+                                            textTransform: "none",
+                                        fontWeight: 600,
+                                        minWidth: { md: 200 },
+                                    }}
+                                >
+                                    Download CSV
+                                </Button>
                             </Stack>
 
                             {/* Content area */}
-                            <Box sx={{ flexGrow: 1, minHeight: 0, overflow: "auto" }}>
+                            <Box
+                                sx={{
+                                    flexGrow: 1,
+                                    minHeight: 0,
+                                    overflowY: "auto",
+                                    overflowX: "auto",
+                                }}
+                            >
                                 {variant === "studentView" ? (
                                     <Box
                                         sx={{
-                                            width: "100%",
+                                            minWidth: "100%",
                                             height: "100%",
                                             display: "flex",
                                             flexDirection: "column",
                                             overflowY: "auto",
+                                            pr: 1,
                                         }}
                                     >
-                                        <DashboardStudent variant="studentView" rows={rowsForUI} />
+                                        <DashboardStudent
+                                            variant="studentView"
+                                            rows={rowsForUI}
+                                            allowInlineReviewEdit
+                                            processRowUpdate={handleInlineReviewUpdate}
+                                            onProcessRowUpdateError={handleInlineReviewError}
+                                            selectionConfig={selectionConfig}
+                                        />
                                     </Box>
                                 ) : (
                                     <Box
                                         sx={{
-                                            width: "100%",
+                                            minWidth: "100%",
                                             height: "80%",
                                             display: "flex",
                                             flexDirection: "column",

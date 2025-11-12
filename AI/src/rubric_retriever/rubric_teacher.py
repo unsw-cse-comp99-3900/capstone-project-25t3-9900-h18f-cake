@@ -1,8 +1,8 @@
 '''
-	1.	统计老师评分分布（了解样本结构、区间覆盖）
-	2.	自动筛选代表性作业（高 / 中 / 低档样本）
-	3.	调用 LLM 学习评分逻辑（分档 2.5 分制）
-	4.	若已有文件，则在原 JSON 下追加“评语补充”
+    1. Analyze tutor score distribution (understand sample structure / coverage)
+    2. Automatically select representative assignments (high / medium / low ranges)
+    3. Call the LLM to learn scoring logic (2.5 point intervals)
+    4. Append “comment supplements” to the source JSON if it already exists
 '''
 import sys, os, json,math, base64
 import numpy as np
@@ -96,7 +96,7 @@ class TeacherScoringAnalyzer:
         level_keys = sorted(llm_study_list.keys(), key=lambda x: float(x.split('-')[0]))
 
         def build_student_content(zid):
-            """提取文本、表格、图片 caption，并返回 text + image_inputs"""
+            """Extract text/tables/image captions and return text + image_inputs"""
             sample = next((s for s in marked_summary if s["student_id"] == zid), None)
             if not sample:
                 return "", []
@@ -144,7 +144,7 @@ class TeacherScoringAnalyzer:
                 high_zid = llm_study_list[level_keys[i + 1]]["student_id"]
                 high_text, high_images = build_student_content(high_zid)
 
-            # prompt构造
+            # Prompt construction
             with open(prompt_template, "r", encoding="utf-8") as f:
                 base_prompt = f.read()
 
@@ -158,10 +158,10 @@ class TeacherScoringAnalyzer:
                 .replace("{{Low-level}}", low_text)
             )
 
-            # 合并所有图片
+            # Merge all images
             all_images = current_images + high_images + low_images
 
-            # 调用 LLM（带图片）
+            # Call the LLM (with images)
             result = llm.call_llm_with_images(prompt, all_images, True, 0.2, 3)
 
             if isinstance(result, dict):

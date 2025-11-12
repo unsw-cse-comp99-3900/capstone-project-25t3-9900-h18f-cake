@@ -1,70 +1,173 @@
-# Getting Started with Create React App
+# CAKE Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React single-page application used by coordinators and tutors to manage courses, ingest assignment artefacts, run AI-assisted marking, and reconcile tutor marks. The UI talks to the FastAPI backend via `/v1/**` endpoints.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Stack Overview
 
-### `npm start`
+| Layer         | Tooling / Notes                                                                   |
+|---------------|-----------------------------------------------------------------------------------|
+| Framework     | React 19 (Create React App)                                                       |
+| UI kit        | MUI 7 + MUI X (DataGrid, Charts)                                                  |
+| Routing       | React Router DOM 7 with `<Private>` / `<PublicOnly>` guards                       |
+| State/Auth    | React Context (`AuthProvider`) storing JWT in `localStorage`                      |
+| Notifications | Sonner                                                                            |
+| API wrapper   | `src/api.js` centralises `fetch` + auth headers                                   |
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Prerequisites & Setup
 
-### `npm test`
+1. Install Node.js ≥ 18.
+2. Run the backend on a reachable host/port.
+3. Create `frontend/.env`:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+   ```bash
+   REACT_APP_API_BASE_URL=http://127.0.0.1:8000
+   ```
 
-### `npm run build`
+4. Install/run:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+   ```bash
+   cd frontend
+   npm install
+   npm start        # http://localhost:3000
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+5. Build for production:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   ```bash
+   npm run build
+   ```
 
-### `npm run eject`
+Scripts: `npm start`, `npm test`, `npm run build`, `npm run eject`.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+---
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Directory Layout
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```
+frontend/
+├── public/               # CRA static assets
+└── src/
+    ├── api.js            # REST helper (auth, courses, assignments, submissions, logs, etc.)
+    ├── component/        # Reusable UI (dashboards, dialogs, upload widgets, sidebar)
+    ├── context/
+    │   └── auth-context.jsx
+    ├── pages/            # Route-level screens
+    ├── routes.jsx        # Router + guards + global <Toaster>
+    └── index.js          # App bootstrap
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## Routing
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+`src/routes.jsx` guards routes with `Private` (requires token) and `PublicOnly` (redirects authenticated users to `/courses`).
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+| Path          | Screen                 | Guard      | Purpose                                  |
+|---------------|------------------------|------------|------------------------------------------|
+| `/`           | `LoginMain`            | PublicOnly | Sign in                                  |
+| `/register`   | `RegisterMain`         | PublicOnly | Account creation                         |
+| `/courses`    | `CoursesPage`          | Private    | Course dashboard + actions               |
+| `/fileupload` | `FileUpload`           | Private    | Assignment artefact wizard               |
+| `/airesult`   | `Airesult`             | Private    | Dashboards + review workflow             |
+| `/admin/logs` | `AdminLogsPage`        | Private    | System log viewer (menu shortcut on `/courses`) |
 
-### Code Splitting
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Feature Highlights
 
-### Analyzing the Bundle Size
+### Courses (`pages/course.jsx`)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- Lists courses grouped by term.
+- Floating header icons (add/delete/logout/logs) mirror the system log page styling.
+- `CourseAdd`, `CourseDelete`, and `CourseActionDialog` trigger CRUD calls through `API.courses`.
+- Action dialog polls `/v1/marking_result/{courseId}/status` so “View AI Results” only opens once AI completes.
 
-### Making a Progressive Web App
+### Assignment Upload (`pages/fileupload.jsx`)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+Wizard steps:
 
-### Advanced Configuration
+1. Assignment metadata + specification.
+2. Rubric upload.
+3. Coordinator submissions.
+4. Coordinator score attachments.
+5. Tutor submissions.
+6. Tutor scores.
+7. Review + confirmation.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Files are validated (PDF/Word), grouped by zID, and sent through `API.assignments` / `API.submissions`. Progress is shown via the stepper component.
 
-### Deployment
+### AI Results (`pages/airesult.jsx`)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+- Polls `/status` until `ai_completed` is true, then fetches records via `API.markingResults.byCourseId`.
+- Top bar houses back button, dashboard/review toggle, logout, and (if needed) system log shortcut.
+- **Dashboard tab**:
+  - Filters by assignment and tutor.
+  - `DashboardStudent` DataGrid with:
+    - Tutor vs AI marks, difference, bullet-point AI justification (pre-line formatting), inline review edit support.
+    - Final mark column (review mark fallback to tutor mark).
+    - Checkbox selection + CSV export (includes final mark).
+  - `DashboardTutorScatter` shows headline metrics, scatter plot, and tutor snapshot table.
+- **Review tab**:
+  - `ReviewDashboard` surfaces items needing review, validates revised marks/comments, and saves via `API.markingResults.upsert`.
+  - Toast feedback on success/failure.
 
-### `npm run build` fails to minify
+### System Logs (`pages/admin-logs.jsx`)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Displays backend events such as assignment uploads, AI marking completion, and mark review completion.
+- Header mirrors the courses page with large back + logout icons.
+- Filters by level/action substring; exports to CSV.
+- Timestamps are shown in Sydney time (AEST/AEDT).
+- Actions are humanised (“AI Marking Success”, “Mark Review Success”, etc.).
+
+---
+
+## API Client (`src/api.js`)
+
+Namespaced helpers:
+
+- `auth`: `register`, `login` (stores token), `logout`.
+- `courses`: `list`, `create`, `remove`.
+- `assignments`: `createWithFiles`, `updateFiles`.
+- `submissions`: `bulkUpload`, `appendFiles`, `create`.
+- `markingResults`: `byCourseId`, `upsert`, `status`, `setStatus`.
+- `systemLogs`: `list`.
+- `health`: `ping`.
+
+Requests automatically include `Authorization: Bearer <token>` and JSON headers unless sending `FormData`.
+
+---
+
+## Development Tips
+
+- Run backend + frontend together; the UI redirects to `/` if API calls 401.
+- When adding new dashboards or exports, keep DataGrid column changes in sync with any CSV formatter (see `airesult.jsx` and `admin-logs.jsx`).
+- For multiline text (feedback, metadata), use `whiteSpace: "pre-line"` so AI justification formatting is preserved.
+- Use `useAuth()` only inside children of `<AuthProvider>` (already wrapped at router level).
+- System logs rely on backend instrumentation; check `/v1/system_logs` if the UI shows empty data.
+
+---
+
+## Troubleshooting
+
+| Issue                               | Fix                                                                 |
+|-------------------------------------|----------------------------------------------------------------------|
+| Continuous redirect to `/`          | Token missing/expired. Re-login or confirm backend token issuance.  |
+| CORS failures                       | Run `npm start` (proxy) or configure backend CORS for `localhost`.  |
+| Upload rejected                     | Ensure files are PDF/Word, filenames include `zID`, and steps are correct. |
+| AI results button disabled          | Backend hasn’t completed AI run. Check `/v1/marking_result/{id}/status`. |
+| System logs missing entries         | Backend not instrumented? Ensure assignment upload / AI sync / review endpoints were hit successfully. |
+
+---
+
+## Contributing
+
+1. Create a branch.
+2. Make changes (prefer `src/component` for shared UI).
+3. Update this README or inline docs when behaviour changes.
+4. Submit PR with relevant screenshots/tests.
+
+Happy coordinating! 🧁

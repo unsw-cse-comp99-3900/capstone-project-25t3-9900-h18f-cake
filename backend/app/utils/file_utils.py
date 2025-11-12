@@ -1,12 +1,16 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Mapping, Any
+from typing import Any, Mapping
+
 
 def _now_iso() -> str:
     return datetime.utcnow().isoformat()
 
-def save_meta_json(folder: Path | str, patch: Mapping[str, Any], name: str = "meta.json") -> str:
+
+def save_meta_json(
+    folder: Path | str, patch: Mapping[str, Any], name: str = "meta.json"
+) -> str:
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / name

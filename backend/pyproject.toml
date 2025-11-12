@@ -1,7 +1,7 @@
 [project]
 name = "app"
 version = "0.1.0"
-description = ""
+description = "UNSW capstone-project-25t3-9900-h18f-cake"
 authors = [
     {name = "jiahao li",email = "z5501964@ad.unsw.edu.au"}
 ]
@@ -67,7 +67,6 @@ dependencies = [
     "opencv-python-headless (==4.10.0.84)",
     "opt-einsum (==3.3.0)",
     "packaging (==25.0)",
-    "paddlepaddle (==3.2.1)",
     "pandas (==2.2.2)",
     "pdfminer-six (==20240706)",
     "pillow (==10.3.0)",
@@ -120,8 +119,12 @@ dependencies = [
 ]
 
 [tool.poetry]
+name = "app"
+version = "0.1.0"
+description = "UNSW capstone-project-25t3-9900-h18f-cake"
+authors = ["jiahao li <z5501964@ad.unsw.edu.au>"]
 packages = [
-  { include = "app", from = "backend" }
+  { include = "app" }
 ]
 
 [[tool.poetry.source]]
@@ -131,14 +134,15 @@ priority = "explicit"
 
 
 [tool.poetry.dependencies]
-paddlepaddle = {source = "paddle-stable-cpu"}
+python = ">=3.12"
+paddlepaddle = {version = "3.2.1", source = "paddle-stable-cpu"}
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[dependency-groups]
-dev = [
-    "black (>=25.9.0,<26.0.0)",
-    "isort (>=6.1.0,<7.0.0)",
-    "alembic (==1.13.2)"
-]
+[tool.poetry.group.dev.dependencies]
+black = ">=25.9.0,<26.0.0"
+isort = ">=6.1.0,<7.0.0"
+alembic = "==1.13.2"
+pytest = ">=8.3.0,<9.0.0"
+pytest-cov = ">=5.0.0,<6.0.0"

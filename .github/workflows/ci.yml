@@ -1,0 +1,51 @@
+name: ci
+on:
+  pull_request:
+    branches: [main, sprint3]
+  push:
+    branches: [main, sprint3]
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: "1.8.3"
+      - name: Install dependencies
+        run: poetry install --all-extras --with dev
+      - name: Install security tooling
+        run: python -m pip install --upgrade pip pip-audit bandit
+      - name: pip-audit
+        run: >
+          pip-audit -r requirements.txt
+          --ignore-vuln GHSA-wj6h-64fc-37mp
+          --ignore-vuln GHSA-wf5f-4jwr-ppcp
+          --ignore-vuln GHSA-f83h-ghpp-7wcc
+          --ignore-vuln GHSA-7hfw-26vp-jp8m
+          --ignore-vuln GHSA-vr63-x8vc-m265
+          --ignore-vuln GHSA-jfx9-29x2-rv3j
+      - name: Bandit
+        run: bandit -q -r app
+      - uses: codecov/codecov-action@v5
+        with:
+          files: backend/coverage.xml
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20, cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci
+      - run: |
+          npm run lint --if-present || npx eslint "src/**/*.{js,jsx}"
+      - run: CI=true npm test -- --watch=false --coverage --passWithNoTests
+      - run: npm audit --production --audit-level=critical

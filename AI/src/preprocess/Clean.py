@@ -61,14 +61,14 @@ class TextCleaner:
         score += 1 if few_punct else 0
         score += 1 if next_is_body else 0
 
-        return score >= 3  # 阈值可调
+        return score >= 3  # Adjustable threshold
     def segment(self, text):
         lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
         paragraphs, bucket = [], []
 
         for i, ln in enumerate(lines):
             if self.head_detect(lines, i):
-                if bucket:  # 结束前一个段
+                if bucket:  # Close the previous paragraph
                     paragraphs.append(" ".join(bucket).strip())
                     bucket = []
                 current_title = ln.rstrip(":") + ":"
@@ -116,7 +116,7 @@ class TextCleaner:
         cleaned_paras = []
         for i, item in enumerate(text["paragraphs"], start=1):
             para = item.get("text", "").strip()
-            if not para:   # 跳过空段
+            if not para:   # Skip empty sections
                 continue
             para = self.basic_clean(para)
             para = self.unicode_normalize(para)
@@ -138,7 +138,7 @@ class TextCleaner:
         print(f"\t[OK] Saved cleaned full file to:  {path_full}.")
         print(f"\t[OK] Saved paragraphs file to:  {path_para}.")
 
-# #用于测试
+# # For testing
 # if __name__ == "__main__":
 #     from pprint import pprint
 
@@ -153,6 +153,6 @@ class TextCleaner:
 #         # print(text_recd)
 #         bc = text_c.process(text_recd)
 
-#         print(bc['paragraphs'])   # 打印出 assignment_id, student_id, prompt_id, response_path, response_text
+#         print(bc['paragraphs'])   # Prints assignment_id, student_id, prompt_id, response_path, response_text
 #     else:
 #         print(f"[WARNing]")

@@ -127,7 +127,7 @@ class LLMClient:
             print(f"[WARN] failed to write LLM log {path}: {log_exc}")
 
 # # ------------------------------------------------------------
-# # ✅ 示例运行（独立调试）
+# # Example run (standalone debug)
 # # ------------------------------------------------------------
 # if __name__ == "__main__":
 #     llm = LLMClient(model="gpt-4o-mini")

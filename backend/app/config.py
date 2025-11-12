@@ -1,5 +1,6 @@
 # backend/app/config.py
 from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -8,7 +9,9 @@ class Settings(BaseSettings):
     # basic setting
     app_env: str = Field(default="dev", alias="APP_ENV")
     secret_key: str = Field(..., alias="SECRET_KEY")
-    access_token_expire_minutes: int = Field(default=120, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    access_token_expire_minutes: int = Field(
+        default=120, alias="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
 
     # ---------- db setting ----------
     sqlalchemy_dsn: str = Field(default="sqlite:///./db/dev.db", alias="SQLALCHEMY_DSN")
@@ -24,7 +27,9 @@ class Settings(BaseSettings):
     # ---------- upload setting ----------
     upload_root: Path = Field(default=Path("uploads"), alias="UPLOAD_ROOT")
     max_upload_mb: int = Field(default=50, alias="MAX_UPLOAD_MB")
-    allowed_extensions: str = Field(default="pdf,doc,docx,txt", alias="ALLOWED_EXTENSIONS")
+    allowed_extensions: str = Field(
+        default="pdf,doc,docx,txt", alias="ALLOWED_EXTENSIONS"
+    )
 
     model_config = {
         "env_file": ".env",
@@ -35,6 +40,7 @@ class Settings(BaseSettings):
     @property
     def UPLOAD_ROOT(self) -> Path:
         return self.upload_root.resolve()
+
 
 settings = Settings()
 

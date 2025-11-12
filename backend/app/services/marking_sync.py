@@ -2,19 +2,23 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Any, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional
 
 from sqlalchemy.orm import Session
 
 from .. import models
-from ..tutor_marking_extract import TutorMarkExtractor
+from ..logging import get_logger
 from ..routers.marking_result_manage import (
+    _REVIEW_DIFF_THRESHOLD,
+    _now_utc_iso,
     course_json_path_by_course,
     load_json,
     save_json_atomic,
-    _now_utc_iso,
-    _REVIEW_DIFF_THRESHOLD,
 )
+from ..services.system_log_service import record_system_log
+from ..tutor_marking_extract import TutorMarkExtractor
+
+logger = get_logger(__name__)
 
 
 def _to_float(value: Any) -> Optional[float]:
@@ -22,6 +26,24 @@ def _to_float(value: Any) -> Optional[float]:
         return float(value) if value is not None else None
     except (TypeError, ValueError):
         return None
+
+
+def _format_score_text(score: Optional[float]) -> str:
+    if score is None:
+        return "score: N/A"
+    value = float(score)
+    if value.is_integer():
+        return f"score: {int(value)}"
+    return f"score: {round(value, 2)}"
+
+
+def _pretty_label(raw: Any) -> str:
+    if raw is None:
+        return "component"
+    label = str(raw).replace("_", " ").strip()
+    while "  " in label:
+        label = label.replace("  ", " ")
+    return label or "component"
 
 
 def _resolve_course(db: Session, submission: models.Submission) -> models.Course:
@@ -61,8 +83,8 @@ def _upsert_record(
     for idx, item in enumerate(data["marking_results"]):
         if not isinstance(item, dict):
             continue
-        same_zid = (item.get("zid", "").lower() == zid.lower())
-        same_aid = (item.get("assignment_id") == assignment_id)
+        same_zid = item.get("zid", "").lower() == zid.lower()
+        same_aid = item.get("assignment_id") == assignment_id
         if same_zid and same_aid:
             record = dict(item)
             record.update(payload)
@@ -76,6 +98,7 @@ def _upsert_record(
 
     return record
 
+
 def sync_tutor_mark_from_file(
     db: Session,
     submission: models.Submission,
@@ -87,6 +110,14 @@ def sync_tutor_mark_from_file(
     mark_path = Path(mark_path)
     if not mark_path.exists():
         raise FileNotFoundError(f"Mark file not found: {mark_path}")
+    logger.info(
+        "tutor_mark_sync_start",
+        extra={
+            "submission_id": submission.id,
+            "assignment_id": submission.assignment_id,
+            "path": str(mark_path),
+        },
+    )
 
     extractor = TutorMarkExtractor()
     extracted = extractor.extract_marks(str(mark_path))
@@ -105,7 +136,10 @@ def sync_tutor_mark_from_file(
     for item in data["marking_results"]:
         if not isinstance(item, dict):
             continue
-        if item.get("zid", "").lower() == zid and item.get("assignment_id") == assignment_id:
+        if (
+            item.get("zid", "").lower() == zid
+            and item.get("assignment_id") == assignment_id
+        ):
             existing = item
             break
 
@@ -126,15 +160,21 @@ def sync_tutor_mark_from_file(
     else:
         if ai_total is not None and tutor_total is not None:
             denom = abs(tutor_total) if abs(tutor_total) > 1e-9 else 1.0
-            needs_review = (abs(ai_total - tutor_total) / denom) >= _REVIEW_DIFF_THRESHOLD
+            needs_review = (
+                abs(ai_total - tutor_total) / denom
+            ) >= _REVIEW_DIFF_THRESHOLD
         else:
             needs_review = bool((existing or {}).get("needs_review"))
 
     payload = {
         "zid": zid,
-        "assignment_id": assignment_id, 
-        "assignment": (existing or {}).get("assignment") or submission.assignment_name or "",
-        "student_name": (existing or {}).get("student_name") or submission.student_id or "",
+        "assignment_id": assignment_id,
+        "assignment": (existing or {}).get("assignment")
+        or submission.assignment_name
+        or "",
+        "student_name": (existing or {}).get("student_name")
+        or submission.student_id
+        or "",
         "ai_marking_detail": (existing or {}).get("ai_marking_detail"),
         "ai_total": ai_total,
         "tutor_marking_detail": extracted.get("tutor_marking_detail"),
@@ -183,6 +223,14 @@ def sync_ai_predictions_from_file(
     data["term"] = course.term or ""
 
     updated_records: list[Dict[str, Any]] = []
+    logger.info(
+        "ai_prediction_sync_start",
+        extra={
+            "assignment_id": assignment_id,
+            "course_id": course.id,
+            "path": str(prediction_path),
+        },
+    )
     for item in predictions:
         zid_raw = (item.get("student_id") or "").lower()
         zid = zid_raw.split("_")[0]
@@ -203,10 +251,16 @@ def sync_ai_predictions_from_file(
                 "score": score,
                 "comment": val.get("comments"),
             }
-            if val.get("comments"):
-                feedback_parts.append(f"{key}: {val['comments']}")
+            readable_label = _pretty_label(key)
+            score_text = _format_score_text(score)
+            comment = val.get("comments")
+            line = f"{readable_label} ({score_text})"
+            if comment:
+                line = f"{line} - {comment}"
+            feedback_parts.append(line)
 
-        ai_feedback = "\n".join(feedback_parts) if feedback_parts else None
+        feedback_body = "\n".join(feedback_parts)
+        ai_feedback = f"{feedback_body}\n" if feedback_parts else None
         existing: Optional[Dict[str, Any]] = None
         for r in data["marking_results"]:
             if not isinstance(r, dict):
@@ -223,7 +277,12 @@ def sync_ai_predictions_from_file(
             difference = round(ai_total - tutor_total, 2)
         existing_status = (existing or {}).get("review_status") or ""
         status_lower = str(existing_status).lower()
-        already_reviewed = status_lower in {"reviewed", "completed", "resolved", "checked"}
+        already_reviewed = status_lower in {
+            "reviewed",
+            "completed",
+            "resolved",
+            "checked",
+        }
 
         if already_reviewed:
             needs_review = False
@@ -259,4 +318,21 @@ def sync_ai_predictions_from_file(
         updated_records.append(record)
 
     save_json_atomic(json_path, data)
+    record_system_log(
+        db,
+        action="ai_marking.success",
+        message=f"AI marking completed for assignment '{assignment.title}'",
+        user_id=None,
+        course_id=course.id,
+        assignment_id=assignment_id,
+        metadata={"count": len(updated_records)},
+    )
+    logger.info(
+        "ai_prediction_sync_completed",
+        extra={
+            "assignment_id": assignment_id,
+            "course_id": course.id,
+            "count": len(updated_records),
+        },
+    )
     return {"updated": len(updated_records), "path": str(json_path)}
