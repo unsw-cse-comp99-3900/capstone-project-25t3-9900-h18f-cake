@@ -1,7 +1,7 @@
 [project]
 name = "app"
 version = "0.1.0"
-description = ""
+description = "UNSW capstone-project-25t3-9900-h18f-cake"
 authors = [
     {name = "jiahao li",email = "z5501964@ad.unsw.edu.au"}
 ]
