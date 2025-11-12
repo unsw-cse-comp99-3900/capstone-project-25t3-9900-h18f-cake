@@ -159,7 +159,20 @@ Requests automatically include `Authorization: Bearer <token>` and JSON headers 
 | CORS failures                       | Run `npm start` (proxy) or configure backend CORS for `localhost`.  |
 | Upload rejected                     | Ensure files are PDF/Word, filenames include `zID`, and steps are correct. |
 | AI results button disabled          | Backend hasn’t completed AI run. Check `/v1/marking_result/{id}/status`. |
-| System logs missing entries         | Backend not instrumented? Ensure assignment upload / AI sync / review endpoints were hit successfully. |
+| System logs missing entries         | Backend not instrumented? Ensure upload/AI/review endpoints fired.  |
+
+---
+
+## Testing
+
+Run the component/unit tests with React Testing Library:
+
+```bash
+cd frontend
+npm test -- --watch=false --coverage
+```
+
+Initial coverage focuses on core navigation components (e.g., the sidebar buttons render as expected and fire the correct callbacks). As you add new features, create companion tests under `src/**/*.test.jsx` that exercise rendering logic, user interactions (`@testing-library/user-event`), and error states. Document any manual or end-to-end scenarios that cannot be automated yet.
 
 ---
 
