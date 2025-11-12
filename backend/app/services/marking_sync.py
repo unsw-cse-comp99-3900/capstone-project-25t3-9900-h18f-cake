@@ -16,7 +16,13 @@ from ..routers.marking_result_manage import (
     save_json_atomic,
 )
 from ..services.system_log_service import record_system_log
-from ..tutor_marking_extract import TutorMarkExtractor
+
+_tutor_extractor_import_error: Optional[Exception] = None
+try:
+    from ..tutor_marking_extract import TutorMarkExtractor
+except Exception as import_exc:  # pragma: no cover - optional dependency
+    TutorMarkExtractor = None  # type: ignore[assignment]
+    _tutor_extractor_import_error = import_exc
 
 logger = get_logger(__name__)
 
@@ -118,6 +124,12 @@ def sync_tutor_mark_from_file(
             "path": str(mark_path),
         },
     )
+
+    if TutorMarkExtractor is None:
+        raise RuntimeError(
+            "Tutor mark extraction is unavailable because required dependencies "
+            "failed to import."
+        ) from _tutor_extractor_import_error
 
     extractor = TutorMarkExtractor()
     extracted = extractor.extract_marks(str(mark_path))
