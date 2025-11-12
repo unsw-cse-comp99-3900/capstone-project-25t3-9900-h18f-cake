@@ -1,19 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+import datetime
+import json
+import logging
+import re
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Any, Optional, Dict, List, Tuple
-import json, datetime, re
-from fastapi import UploadFile, File
+from typing import Any, Dict, List, Optional, Tuple
 
-from app.db import get_db
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Session
+
 from app import models
-from app.deps import get_current_user, UserClaims
+from app.db import get_db
+from app.deps import UserClaims, get_current_user
 from app.services.system_log_service import record_system_log
 
-
-
 router = APIRouter(prefix="/v1/marking_result", tags=["marking_result"])
+logger = logging.getLogger(__name__)
 
 # ---------- Utils ----------
 _TERM_RX = re.compile(r"^\s*(\d{4})\s*(?:Term|T)?\s*([0-9]+)\s*$", re.IGNORECASE)
@@ -97,7 +99,7 @@ class MarkingIn(BaseModel):
 
     zid: str
     student_name: Optional[str] = None
-    assignment_id: Optional[int] = None 
+    assignment_id: Optional[int] = None
     assignment: Optional[str] = None
     ai_marking_detail: Optional[Dict[str, Any]] = None
     tutor_marking_detail: Optional[Dict[str, Any]] = None
@@ -112,6 +114,7 @@ class MarkingIn(BaseModel):
     review_status: Optional[str] = None
     review_mark: Optional[float] = None
     review_comments: Optional[str] = None
+
 
 class MarkingOut(MarkingIn):
     created_at: str
@@ -208,6 +211,7 @@ def get_marking_status(
     try:
         # Local import to avoid circular import at module load time
         from app.utils.jobq import get_jobq
+
         st_map = get_jobq().list_status()
         pending = False
         for aid, st in st_map.items():
@@ -221,9 +225,11 @@ def get_marking_status(
                 break
         if pending:
             ai_completed = False
-    except Exception:
-        # Fall back to stored flag if dynamic status fails
-        pass
+    except Exception as exc:
+        logger.warning(
+            "Failed to inspect AI job queue for course %s: %s", course.id, exc
+        )
+        # Fall back to stored flag if dynamic status check fails
 
     return {"ai_completed": ai_completed}
 
@@ -298,7 +304,7 @@ def append_marking_result(
         if not isinstance(r, dict):
             continue
         same_zid = str(r.get("zid", "")).strip().lower() == zid_norm
-        same_aid = (r.get("assignment_id") == aid)
+        same_aid = r.get("assignment_id") == aid
         if same_zid and same_aid:
             existing = r
             existing_idx = i
@@ -350,15 +356,24 @@ def append_marking_result(
         record["difference"] = difference
     else:
         difference = to_float(record.get("difference"))
-    new_status = record.get("review_status") or (existing or {}).get("review_status") or ""
+    new_status = (
+        record.get("review_status") or (existing or {}).get("review_status") or ""
+    )
     record["review_status"] = new_status
-    is_reviewed = str(new_status).lower() in {"reviewed", "completed", "resolved", "checked"}
+    is_reviewed = str(new_status).lower() in {
+        "reviewed",
+        "completed",
+        "resolved",
+        "checked",
+    }
 
     if is_reviewed:
         record["needs_review"] = False
     else:
         if difference is not None and tutor_value not in (None, 0):
-            record["needs_review"] = abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
+            record["needs_review"] = (
+                abs(difference) / abs(tutor_value) >= _REVIEW_DIFF_THRESHOLD
+            )
         else:
             record["needs_review"] = bool(record.get("needs_review"))
 

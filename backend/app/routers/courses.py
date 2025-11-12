@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
-from sqlalchemy.orm import Session
-from pathlib import Path
-from sqlalchemy import and_
-from ..db import get_db
-from .. import models, schemas
-from ..deps import get_current_user, UserClaims
 import datetime
 import json
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+
+from .. import models, schemas
+from ..db import get_db
+from ..deps import UserClaims, get_current_user
 
 router = APIRouter(prefix="/v1/courses", tags=["courses"])
+
 
 @router.post("/", response_model=schemas.CourseOut, status_code=201)
 def create_course(
@@ -36,8 +39,10 @@ def create_course(
         .first()
     )
     if exists:
-        raise HTTPException(status_code=400, detail="This course code already exists in the same term")
-    
+        raise HTTPException(
+            status_code=400, detail="This course code already exists in the same term"
+        )
+
     year, spec_term = term.split("Term")
     year = year.strip()
     spec_term = spec_term.strip()
@@ -49,7 +54,7 @@ def create_course(
     db.commit()
     db.refresh(c)
 
-    #create folder and json file for this new course
+    # create folder and json file for this new course
     base_folder = Path("./marking_result")
     folder = base_folder / Json_name
     folder.mkdir(parents=True, exist_ok=True)
@@ -62,7 +67,7 @@ def create_course(
             "term": term,
             "created_at": datetime.datetime.now().isoformat(),
             "ai_marking_finished": False,
-            "marking_results": []
+            "marking_results": [],
         }
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(init_data, f, indent=4, ensure_ascii=False)
@@ -95,13 +100,13 @@ def delete_course(
     if c.owner_id != int(me.sub):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    #get the info about course code and course term
+    # get the info about course code and course term
     year, spec_term = c.term.split("Term")
     spec_term = f"Term{spec_term}"
 
     year = year.strip()
     spec_term = spec_term.strip()
-    
+
     folder = Path("marking_result") / f"{year}_{spec_term}"
     file_path = folder / f"{c.code}.json"
 

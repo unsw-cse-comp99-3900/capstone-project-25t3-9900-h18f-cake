@@ -2,21 +2,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Any, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional
 
 from sqlalchemy.orm import Session
 
 from .. import models
-from ..tutor_marking_extract import TutorMarkExtractor
-from ..routers.marking_result_manage import (
-    course_json_path_by_course,
-    load_json,
-    save_json_atomic,
-    _now_utc_iso,
-    _REVIEW_DIFF_THRESHOLD,
-)
-from ..services.system_log_service import record_system_log
 from ..logging import get_logger
+from ..routers.marking_result_manage import (_REVIEW_DIFF_THRESHOLD,
+                                             _now_utc_iso,
+                                             course_json_path_by_course,
+                                             load_json, save_json_atomic)
+from ..services.system_log_service import record_system_log
+from ..tutor_marking_extract import TutorMarkExtractor
 
 logger = get_logger(__name__)
 
@@ -83,8 +80,8 @@ def _upsert_record(
     for idx, item in enumerate(data["marking_results"]):
         if not isinstance(item, dict):
             continue
-        same_zid = (item.get("zid", "").lower() == zid.lower())
-        same_aid = (item.get("assignment_id") == assignment_id)
+        same_zid = item.get("zid", "").lower() == zid.lower()
+        same_aid = item.get("assignment_id") == assignment_id
         if same_zid and same_aid:
             record = dict(item)
             record.update(payload)
@@ -97,6 +94,7 @@ def _upsert_record(
         data["marking_results"].append(record)
 
     return record
+
 
 def sync_tutor_mark_from_file(
     db: Session,
@@ -135,7 +133,10 @@ def sync_tutor_mark_from_file(
     for item in data["marking_results"]:
         if not isinstance(item, dict):
             continue
-        if item.get("zid", "").lower() == zid and item.get("assignment_id") == assignment_id:
+        if (
+            item.get("zid", "").lower() == zid
+            and item.get("assignment_id") == assignment_id
+        ):
             existing = item
             break
 
@@ -156,15 +157,21 @@ def sync_tutor_mark_from_file(
     else:
         if ai_total is not None and tutor_total is not None:
             denom = abs(tutor_total) if abs(tutor_total) > 1e-9 else 1.0
-            needs_review = (abs(ai_total - tutor_total) / denom) >= _REVIEW_DIFF_THRESHOLD
+            needs_review = (
+                abs(ai_total - tutor_total) / denom
+            ) >= _REVIEW_DIFF_THRESHOLD
         else:
             needs_review = bool((existing or {}).get("needs_review"))
 
     payload = {
         "zid": zid,
-        "assignment_id": assignment_id, 
-        "assignment": (existing or {}).get("assignment") or submission.assignment_name or "",
-        "student_name": (existing or {}).get("student_name") or submission.student_id or "",
+        "assignment_id": assignment_id,
+        "assignment": (existing or {}).get("assignment")
+        or submission.assignment_name
+        or "",
+        "student_name": (existing or {}).get("student_name")
+        or submission.student_id
+        or "",
         "ai_marking_detail": (existing or {}).get("ai_marking_detail"),
         "ai_total": ai_total,
         "tutor_marking_detail": extracted.get("tutor_marking_detail"),
@@ -249,7 +256,8 @@ def sync_ai_predictions_from_file(
                 line = f"{line} - {comment}"
             feedback_parts.append(line)
 
-        ai_feedback = f"{'\n'.join(feedback_parts)}\n" if feedback_parts else None
+        feedback_body = "\n".join(feedback_parts)
+        ai_feedback = f"{feedback_body}\n" if feedback_parts else None
         existing: Optional[Dict[str, Any]] = None
         for r in data["marking_results"]:
             if not isinstance(r, dict):
@@ -266,7 +274,12 @@ def sync_ai_predictions_from_file(
             difference = round(ai_total - tutor_total, 2)
         existing_status = (existing or {}).get("review_status") or ""
         status_lower = str(existing_status).lower()
-        already_reviewed = status_lower in {"reviewed", "completed", "resolved", "checked"}
+        already_reviewed = status_lower in {
+            "reviewed",
+            "completed",
+            "resolved",
+            "checked",
+        }
 
         if already_reviewed:
             needs_review = False

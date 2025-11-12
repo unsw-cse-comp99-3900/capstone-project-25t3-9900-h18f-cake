@@ -1,21 +1,23 @@
+import json
+import os
 import re
+from typing import Any, Dict, Optional
+
 import fitz
 from docx import Document
-import os
-import json
-from typing import Dict, Any, Optional
+
 
 class TutorMarkExtractor:
     def __init__(self):
         # Match each rubric item
         self.pattern = re.compile(
             r"([A-Z][A-Za-z &/]+)[:：]\s*([0-9]+(?:\.[0-9]+)?)\s*/\s*([0-9]+(?:\.[0-9]+)?)(?:\s*marks?)?",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
         # Match total score
         self.total_pattern = re.compile(
             r"Total\s*Mark[:：]?\s*([0-9]+(?:\.[0-9]+)?)\s*/\s*([0-9]+(?:\.[0-9]+)?)",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
     def load_text(self, file_path: str) -> str:
@@ -40,10 +42,7 @@ class TutorMarkExtractor:
         for match in self.pattern.findall(text):
             name, got, total = match
             name = name.strip().replace("\n", " ")
-            tutor_detail[name] = {
-                "score": float(got),
-                "total": float(total)
-            }
+            tutor_detail[name] = {"score": float(got), "total": float(total)}
 
         # Overall total
         tutor_total = None
@@ -51,23 +50,20 @@ class TutorMarkExtractor:
         if total_match:
             got, total = total_match.groups()
             tutor_total = float(got)
-            tutor_detail["Total Mark"] = {
-                "score": float(got),
-                "total": float(total)
-            }
+            tutor_detail["Total Mark"] = {"score": float(got), "total": float(total)}
 
         # Assemble result that matches the MarkingIn schema
         result = {
-            "zid": os.path.basename(file_path).split("_")[0],  # Extract zID from the filename
+            "zid": os.path.basename(file_path).split("_")[
+                0
+            ],  # Extract zID from the filename
             "tutor_marking_detail": tutor_detail,
             "tutor_total": tutor_total,
             "marked_by": "tutor",
-            "needs_review": False
+            "needs_review": False,
         }
 
         return result
-
-
 
 
 # if __name__ == "__main__":

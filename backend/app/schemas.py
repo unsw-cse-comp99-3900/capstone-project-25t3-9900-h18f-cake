@@ -1,32 +1,42 @@
-from pydantic import BaseModel, EmailStr, constr
 from typing import List, Optional
-from .models import SubmissionStatus, ActorRole, PartKind
+
+from pydantic import BaseModel, EmailStr, constr
+
+from .models import ActorRole, PartKind, SubmissionStatus
+
 
 class TokenOut(BaseModel):
     access_token: str
+
 
 class UserCreate(BaseModel):
     email: EmailStr
     password: constr(min_length=6, max_length=256)
 
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr
+
     class Config:
         from_attributes = True
+
 
 class CourseIn(BaseModel):
     code: str
     name: str
     term: Optional[str] = None
 
+
 class CourseOut(CourseIn):
     id: int
     name: str
     term: str | None = None
     owner_id: int
+
     class Config:
         from_attributes = True
+
 
 class AssignmentIn(BaseModel):
     course_id: int
@@ -34,19 +44,24 @@ class AssignmentIn(BaseModel):
     rubric_json: Optional[str] = None
     spec_url: Optional[str] = None
 
+
 class AssignmentOut(AssignmentIn):
     id: int
+
     class Config:
         from_attributes = True
+
 
 class SubmissionOut(BaseModel):
     id: int
     assignment_id: int
     student_id: str
     path: str
-    status: str 
+    status: str
+
     class Config:
         from_attributes = True
+
 
 class SubmissionFileOut(BaseModel):
     id: int
@@ -60,6 +75,7 @@ class SubmissionFileOut(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class SubmissionDetailOut(BaseModel):
     id: int

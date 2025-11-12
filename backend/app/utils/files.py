@@ -1,15 +1,18 @@
 import os
 from pathlib import Path
-from fastapi import UploadFile, HTTPException
+
+from fastapi import HTTPException, UploadFile
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED = {"pdf"}
 
+
 def _assert_allowed(filename: str):
     ext = filename.rsplit(".", 1)[-1].lower()
     if ext not in ALLOWED:
         raise HTTPException(status_code=400, detail=f"Unsupported extension: .{ext}")
+
 
 async def save_upload(file: UploadFile, subdir: str = "") -> str:
     _assert_allowed(file.filename)
@@ -23,6 +26,7 @@ async def save_upload(file: UploadFile, subdir: str = "") -> str:
     with path.open("wb") as f:
         while True:
             chunk = await file.read(1024 * 1024)
-            if not chunk: break
+            if not chunk:
+                break
             f.write(chunk)
     return str(path)

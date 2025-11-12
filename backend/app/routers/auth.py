@@ -1,11 +1,13 @@
 # app/routers/auth.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from ..db import get_db
+
 from .. import models, schemas
-from ..security import hash_password, create_access_token, verify_password
+from ..db import get_db
+from ..security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
+
 
 @router.post("/register", response_model=schemas.UserOut, status_code=201)
 def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -21,6 +23,7 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return user
+
 
 @router.post("/login", response_model=schemas.TokenOut)
 def login(payload: schemas.UserCreate, db: Session = Depends(get_db)):

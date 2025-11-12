@@ -6,7 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .logging import get_logger, bind_request_id, release_request_id
+from .logging import bind_request_id, get_logger, release_request_id
 
 request_logger = get_logger("app.request")
 

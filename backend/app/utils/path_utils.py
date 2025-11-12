@@ -1,8 +1,10 @@
 # app/utils/path_utils.py
 from __future__ import annotations
+
 import os
 import re
 from pathlib import Path
+
 from ..config import settings
 
 
@@ -20,7 +22,7 @@ def course_term_dir(course: str, term: str) -> str:
 
 
 def assignment_dir(course: str, term: str, title: str, assignment_id: int) -> Path:
-    root = settings.upload_root 
+    root = settings.upload_root
     slug = f"{slugify(title)}-{assignment_id}"
     return root / course_term_dir(course, term) / slug
 

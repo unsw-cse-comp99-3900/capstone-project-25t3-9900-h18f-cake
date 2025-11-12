@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 
-from ..db import get_db
 from .. import models
-from ..deps import get_current_user, UserClaims
+from ..db import get_db
+from ..deps import UserClaims, get_current_user
 
 router = APIRouter(prefix="/v1/system_logs", tags=["system_logs"])
 
@@ -16,7 +16,9 @@ router = APIRouter(prefix="/v1/system_logs", tags=["system_logs"])
 class SystemLogCreate(BaseModel):
     action: str = Field(..., max_length=128)
     message: str = Field(..., max_length=2000)
-    level: str = Field(default="INFO", pattern=r"^(?i)(debug|info|warning|error|critical)$")
+    level: str = Field(
+        default="INFO", pattern=r"^(?i)(debug|info|warning|error|critical)$"
+    )
     course_id: Optional[int] = None
     assignment_id: Optional[int] = None
     metadata: Optional[dict[str, Any]] = None
@@ -66,7 +68,9 @@ def _serialize(log: models.SystemLog) -> SystemLogOut:
 def list_logs(
     db: Session = Depends(get_db),
     _: UserClaims = Depends(get_current_user),
-    level: Optional[str] = Query(None, pattern=r"^(?i)(debug|info|warning|error|critical)$"),
+    level: Optional[str] = Query(
+        None, pattern=r"^(?i)(debug|info|warning|error|critical)$"
+    ),
     action: Optional[str] = Query(None, max_length=128),
     user_id: Optional[int] = Query(None),
     course_id: Optional[int] = Query(None),
@@ -108,7 +112,9 @@ def create_log(
         user_id=int(user.sub) if user and user.sub else None,
         course_id=payload.course_id,
         assignment_id=payload.assignment_id,
-        metadata_json=json.dumps(payload.metadata, ensure_ascii=False) if payload.metadata else None,
+        metadata_json=json.dumps(payload.metadata, ensure_ascii=False)
+        if payload.metadata
+        else None,
     )
     db.add(log)
     db.commit()

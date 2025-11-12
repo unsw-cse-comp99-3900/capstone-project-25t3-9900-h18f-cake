@@ -1,21 +1,26 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, BackgroundTasks
-from sqlalchemy.orm import Session
-from typing import List, Optional
-import shutil, re
+import logging
+import re
+import shutil
 from datetime import datetime
 from pathlib import Path
-from ..db import get_db
-from ..models import Submission, SubmissionFile, ActorRole, PartKind 
-from ..schemas import SubmissionDetailOut
-from ..deps import get_current_user
-from ..utils.submission_status import compute_status
-from ..utils.file_utils import save_meta_json
-from ..utils.path_utils import assignment_dir, student_dir
-from ..services.marking_sync import sync_tutor_mark_from_file
-from ..utils.jobq import get_jobq
+from typing import List, Optional
 
+from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form,
+                     HTTPException, UploadFile)
+from sqlalchemy.orm import Session
+
+from ..db import get_db
+from ..deps import get_current_user
+from ..models import ActorRole, PartKind, Submission, SubmissionFile
+from ..schemas import SubmissionDetailOut
+from ..services.marking_sync import sync_tutor_mark_from_file
+from ..utils.file_utils import save_meta_json
+from ..utils.jobq import get_jobq
+from ..utils.path_utils import assignment_dir, student_dir
+from ..utils.submission_status import compute_status
 
 router = APIRouter(prefix="/v1/submissions", tags=["submissions"])
+logger = logging.getLogger(__name__)
 
 
 # ---------- Helper ----------
@@ -25,11 +30,16 @@ def extract_student_id(filename: str) -> Optional[str]:
 
 
 def _role_kind_from_step(step_index: int) -> tuple[ActorRole, PartKind]:
-    if step_index == 3: return ActorRole.COORDINATOR, PartKind.ASSIGNMENT
-    if step_index == 4: return ActorRole.COORDINATOR, PartKind.SCORE
-    if step_index == 5: return ActorRole.TUTOR, PartKind.ASSIGNMENT
-    if step_index == 6: return ActorRole.TUTOR, PartKind.SCORE
+    if step_index == 3:
+        return ActorRole.COORDINATOR, PartKind.ASSIGNMENT
+    if step_index == 4:
+        return ActorRole.COORDINATOR, PartKind.SCORE
+    if step_index == 5:
+        return ActorRole.TUTOR, PartKind.ASSIGNMENT
+    if step_index == 6:
+        return ActorRole.TUTOR, PartKind.SCORE
     return ActorRole.COORDINATOR, PartKind.ASSIGNMENT
+
 
 # def _save_step_files(
 #     db: Session,
@@ -102,8 +112,12 @@ def _save_step_files(
       - Student_assignment_with_Tutor_mark/<zid>/<zid>_{assignment|mark}.*
     """
 
-    base_assignment: Path = assignment_dir(course, term, assignment_name, assignment_id or 0)
-    sid = (student_id or getattr(sub, "student_id", None) or f"unknown-{sub.id}").lower()
+    base_assignment: Path = assignment_dir(
+        course, term, assignment_name, assignment_id or 0
+    )
+    sid = (
+        student_id or getattr(sub, "student_id", None) or f"unknown-{sub.id}"
+    ).lower()
     role, kind = _role_kind_from_step(step_index)
 
     folder_by_role = {
@@ -131,31 +145,27 @@ def _save_step_files(
         for old in step_dir.glob(f"{sid}_{label}.*"):
             try:
                 old.unlink()
-            except Exception:
-                pass
+            except OSError as exc:
+                logger.warning("Failed to remove stale file %s: %s", old, exc)
 
         with open(dest, "wb") as f:
             shutil.copyfileobj(uf.file, f)
 
-        db.add(SubmissionFile(
-            submission_id=sub.id,
-            step_index=step_index,
-            actor_role=role,
-            part_kind=kind,
-            filename=fname,
-            path=str(dest),
-            mime=uf.content_type,
-            size=None,
-            uploaded_by=user_id,
-            uploaded_at=datetime.utcnow(),
-        ))
+        db.add(
+            SubmissionFile(
+                submission_id=sub.id,
+                step_index=step_index,
+                actor_role=role,
+                part_kind=kind,
+                filename=fname,
+                path=str(dest),
+                mime=uf.content_type,
+                size=None,
+                uploaded_by=user_id,
+                uploaded_at=datetime.utcnow(),
+            )
+        )
         saved_paths.append(dest)
-
-
-
-
-
-
 
     # # update marked file's question adn tutor mark into course marking result json file
     # if step_index == 6 and role.name == "TUTOR" and kind.name == "SCORE":
@@ -184,12 +194,7 @@ def _save_step_files(
     #     except Exception as e:
     #         print(f"[WARN] Tutor mark extraction failed: {e}")
 
-
-
-
     return saved_paths
-
-
 
 
 # ---------- Create single submission ----------
@@ -200,15 +205,13 @@ async def create_submission(
     course: str = Form(...),
     term: str = Form(""),
     studentId: Optional[str] = Form(None),
-
     step1: Optional[List[UploadFile]] = File(None),
     step2: Optional[List[UploadFile]] = File(None),
     step3: Optional[List[UploadFile]] = File(None),
     step4: Optional[List[UploadFile]] = File(None),
     step5: Optional[List[UploadFile]] = File(None),
     step6: Optional[List[UploadFile]] = File(None),
-
-    assignmentId: Optional[int] = Form(None),   
+    assignmentId: Optional[int] = Form(None),
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
@@ -226,8 +229,14 @@ async def create_submission(
     tutor_mark_paths: list[Path] = []
     ai_assignment_paths: list[Path] = []
 
-    for idx, files in [(1, step1), (2, step2), (3, step3),
-                       (4, step4), (5, step5), (6, step6)]:
+    for idx, files in [
+        (1, step1),
+        (2, step2),
+        (3, step3),
+        (4, step4),
+        (5, step5),
+        (6, step6),
+    ]:
         if files:
             saved = _save_step_files(
                 db=db,
@@ -238,7 +247,7 @@ async def create_submission(
                 assignment_id=assignmentId,
                 step_index=idx,
                 files=files,
-                user_id= int(user.sub),
+                user_id=int(user.sub),
                 student_id=studentId,
             )
             if idx == 5:
@@ -252,10 +261,13 @@ async def create_submission(
         try:
             sync_tutor_mark_from_file(db, sub, mark_path)
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to sync tutor mark: {exc}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to sync tutor mark: {exc}"
+            )
 
-
-    base_assignment: Path = assignment_dir(course, term or "", assignmentName, assignmentId or 0)
+    base_assignment: Path = assignment_dir(
+        course, term or "", assignmentName, assignmentId or 0
+    )
     sid_for_meta = (studentId or sub.student_id or f"unknown-{sub.id}").lower()
     student_folder = student_dir(base_assignment, sid_for_meta)
     meta = {
@@ -267,9 +279,18 @@ async def create_submission(
         "student_id": sid_for_meta,
         "status": sub.status.value if hasattr(sub.status, "value") else sub.status,
         "uploaded_by": user.sub,
-        "steps_uploaded": [idx for idx, f in [(1, step1), (2, step2),
-                                              (3, step3), (4, step4),
-                                              (5, step5), (6, step6)] if f],
+        "steps_uploaded": [
+            idx
+            for idx, f in [
+                (1, step1),
+                (2, step2),
+                (3, step3),
+                (4, step4),
+                (5, step5),
+                (6, step6),
+            ]
+            if f
+        ],
     }
     meta_path = save_meta_json(student_folder, meta)
     sub.meta_json = str(meta_path)
@@ -278,19 +299,34 @@ async def create_submission(
     db.refresh(sub)
     if assignmentId and ai_assignment_paths:
         enq = get_jobq().enqueue(assignmentId)
-        print(f"[AI][API] enqueue from create_submission: assignment_id={assignmentId}, files={len(ai_assignment_paths)}, enqueued={enq}")
+        print(
+            f"[AI][API] enqueue from create_submission: assignment_id={assignmentId}, files={len(ai_assignment_paths)}, enqueued={enq}"
+        )
         # Mark course AI status as not completed while jobs are queued
         try:
-            from .marking_result_manage import course_json_path_by_course, load_json, save_json_atomic
             from .. import models as _models
-            course_obj = db.query(_models.Course).filter(_models.Course.code == course, _models.Course.term == (term or "")).limit(1).first()
+            from .marking_result_manage import (course_json_path_by_course,
+                                                load_json, save_json_atomic)
+
+            course_obj = (
+                db.query(_models.Course)
+                .filter(
+                    _models.Course.code == course, _models.Course.term == (term or "")
+                )
+                .limit(1)
+                .first()
+            )
             if course_obj is not None:
                 json_path = course_json_path_by_course(course_obj)
                 data = load_json(json_path)
                 data["ai_completed"] = False
                 save_json_atomic(json_path, data)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "Failed to flag AI status pending for course %s during submission create: %s",
+                course,
+                exc,
+            )
     return sub
 
 
@@ -323,29 +359,55 @@ async def append_files(
     )
     if stepIndex == 5 and sub.assignment_id:
         enq = get_jobq().enqueue(sub.assignment_id)
-        print(f"[AI][API] enqueue from append_files: assignment_id={sub.assignment_id}, enqueued={enq}", flush=True)
+        print(
+            f"[AI][API] enqueue from append_files: assignment_id={sub.assignment_id}, enqueued={enq}",
+            flush=True,
+        )
         # Mark course AI status as not completed while jobs are queued
         try:
-            from .marking_result_manage import course_json_path_by_course, load_json, save_json_atomic
-            course_obj = db.get(models.Course, getattr(sub, 'course_id', None)) if hasattr(sub, 'course_id') else None
+            from .marking_result_manage import (course_json_path_by_course,
+                                                load_json, save_json_atomic)
+
+            course_obj = (
+                db.get(models.Course, getattr(sub, "course_id", None))
+                if hasattr(sub, "course_id")
+                else None
+            )
             if course_obj is None:
                 # Fallback resolve by code+term
-                course_obj = db.query(models.Course).filter(models.Course.code == sub.course, models.Course.term == (sub.term or "")).limit(1).first()
+                course_obj = (
+                    db.query(models.Course)
+                    .filter(
+                        models.Course.code == sub.course,
+                        models.Course.term == (sub.term or ""),
+                    )
+                    .limit(1)
+                    .first()
+                )
             if course_obj is not None:
                 json_path = course_json_path_by_course(course_obj)
                 data = load_json(json_path)
                 data["ai_completed"] = False
                 save_json_atomic(json_path, data)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "Failed to flag AI status pending for submission %s course %s: %s",
+                sub.id,
+                sub.course,
+                exc,
+            )
     if stepIndex == 6:
         for mark_path in saved_paths:
             try:
                 sync_tutor_mark_from_file(db, sub, mark_path)
             except Exception as exc:
-                raise HTTPException(status_code=500, detail=f"Failed to sync tutor mark: {exc}")
+                raise HTTPException(
+                    status_code=500, detail=f"Failed to sync tutor mark: {exc}"
+                )
     sub.status = compute_status(sub)
-    base_assignment: Path = assignment_dir(sub.course, sub.term, sub.assignment_name, sub.assignment_id or 0)
+    base_assignment: Path = assignment_dir(
+        sub.course, sub.term, sub.assignment_name, sub.assignment_id or 0
+    )
     sid_for_meta = (studentId or sub.student_id or f"unknown-{sub.id}").lower()
     student_folder = student_dir(base_assignment, sid_for_meta)
     meta = {
@@ -369,9 +431,9 @@ async def append_files(
 
 # ---------- Get single submission ----------
 @router.get("/{submission_id}", response_model=SubmissionDetailOut)
-def get_submission(submission_id: int,
-                   db: Session = Depends(get_db),
-                   user=Depends(get_current_user)):
+def get_submission(
+    submission_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
+):
     sub = db.get(Submission, submission_id)
     if not sub:
         raise HTTPException(404, "Submission not found")
@@ -395,7 +457,8 @@ async def bulk_upload_student_assignments(
         sid = extract_student_id(f.filename)
         if not sid:
             raise HTTPException(
-                400, f"Filename {f.filename} missing student ID (expected like z1234567)"
+                400,
+                f"Filename {f.filename} missing student ID (expected like z1234567)",
             )
 
         sub = Submission(
@@ -410,8 +473,15 @@ async def bulk_upload_student_assignments(
         db.flush()
 
         # path：uploads/{course-term}/{assignmentSlug}-{assignmentId}/submissions/Student_assignment_with_coordinator_mark/{studentId}/{studentId}_assignment.<ext>
-        base_assignment: Path = assignment_dir(course, term or "", assignmentName, assignmentId)
-        storage_dir = base_assignment / "submissions" / "Student_assignment_with_coordinator_mark" / sid
+        base_assignment: Path = assignment_dir(
+            course, term or "", assignmentName, assignmentId
+        )
+        storage_dir = (
+            base_assignment
+            / "submissions"
+            / "Student_assignment_with_coordinator_mark"
+            / sid
+        )
         storage_dir.mkdir(parents=True, exist_ok=True)
 
         role, kind = ActorRole.COORDINATOR, PartKind.ASSIGNMENT
@@ -421,23 +491,25 @@ async def bulk_upload_student_assignments(
         for old in storage_dir.glob(f"{sid}_assignment.*"):
             try:
                 old.unlink()
-            except Exception:
-                pass
+            except OSError as exc:
+                logger.warning("Failed to remove coordinator upload %s: %s", old, exc)
         with open(dest, "wb") as out:
             shutil.copyfileobj(f.file, out)
 
-        db.add(SubmissionFile(
-            submission_id=sub.id,
-            step_index=3,
-            actor_role=role,
-            part_kind=kind,
-            filename=dest.name,
-            path=str(dest),
-            mime=f.content_type,
-            size=None,
-            uploaded_by=int(user.sub),
-            uploaded_at=datetime.utcnow(),
-        ))
+        db.add(
+            SubmissionFile(
+                submission_id=sub.id,
+                step_index=3,
+                actor_role=role,
+                part_kind=kind,
+                filename=dest.name,
+                path=str(dest),
+                mime=f.content_type,
+                size=None,
+                uploaded_by=int(user.sub),
+                uploaded_at=datetime.utcnow(),
+            )
+        )
 
         meta_folder = student_dir(base_assignment, sid)
         sub.status = compute_status(sub)

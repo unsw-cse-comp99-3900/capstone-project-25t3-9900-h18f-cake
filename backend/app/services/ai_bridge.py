@@ -1,25 +1,34 @@
+import logging
 import os
-import time
-import stat
 import shutil
+import stat
+import time
 from pathlib import Path
 
-BACKEND_DIR = Path(__file__).resolve().parents[2] 
-AI_DIR      = BACKEND_DIR.parent / "AI" 
-RUBRIC_DIR  = AI_DIR / "artifacts" / "rubric"
-MARKED_DIR  = AI_DIR / "data" / "marked"
-AI_TEST_DIR = AI_DIR / "data" / "test"   
+logger = logging.getLogger(__name__)
+
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+AI_DIR = BACKEND_DIR.parent / "AI"
+RUBRIC_DIR = AI_DIR / "artifacts" / "rubric"
+MARKED_DIR = AI_DIR / "data" / "marked"
+AI_TEST_DIR = AI_DIR / "data" / "test"
 
 
 def _handle_remove_readonly(func, path, _exc):
     try:
         os.chmod(path, stat.S_IWRITE)
-    except Exception:
-        pass
+    except OSError as exc:
+        logger.debug("Failed to chmod %s during cleanup: %s", path, exc)
     try:
         func(path)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(
+            "Failed to remove %s via %s: %s",
+            path,
+            getattr(func, "__name__", func),
+            exc,
+        )
+
 
 def _clean_dir(d: Path):
     d.mkdir(parents=True, exist_ok=True)
@@ -38,6 +47,7 @@ def _clean_dir(d: Path):
             time.sleep(0.5)
     shutil.rmtree(d, ignore_errors=True)
     d.mkdir(parents=True, exist_ok=True)
+
 
 def copy_students_for_predict_to_ai(student_files_root: Path, source="Tutor"):
     print(f"[AI][BRIDGE] AI_TEST_DIR={AI_TEST_DIR}", flush=True)
@@ -82,7 +92,9 @@ def copy_students_for_predict_to_ai(student_files_root: Path, source="Tutor"):
                 copied.append(str(dest))
     except Exception as e:
         print(f"[AI][BRIDGE] staging loop failed: {e}", flush=True)
-        import traceback; traceback.print_exc()
+        import traceback
+
+        traceback.print_exc()
         raise
     print(f"[AI][BRIDGE] copied={len(copied)}", flush=True)
     return copied
