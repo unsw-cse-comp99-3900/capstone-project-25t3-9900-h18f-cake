@@ -124,7 +124,7 @@ version = "0.1.0"
 description = "UNSW capstone-project-25t3-9900-h18f-cake"
 authors = ["jiahao li <z5501964@ad.unsw.edu.au>"]
 packages = [
-  { include = "app", from = "backend" }
+  { include = "app" }
 ]
 
 [[tool.poetry.source]]
