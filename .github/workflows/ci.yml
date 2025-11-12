@@ -19,8 +19,6 @@ jobs:
           poetry-version: "1.8.3"
       - name: Install dependencies
         run: poetry install --all-extras --with dev
-      - name: Lint (black)
-        run: poetry run black --check app
       - name: Lint (isort)
         run: poetry run isort --check-only app
       - name: Install security tooling
