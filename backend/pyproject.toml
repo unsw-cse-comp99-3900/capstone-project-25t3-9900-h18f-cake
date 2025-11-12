@@ -134,6 +134,7 @@ priority = "explicit"
 
 
 [tool.poetry.dependencies]
+python = ">=3.12"
 paddlepaddle = {version = "3.2.1", source = "paddle-stable-cpu"}
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
