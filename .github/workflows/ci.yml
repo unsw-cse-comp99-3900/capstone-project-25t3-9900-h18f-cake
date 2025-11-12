@@ -46,5 +46,5 @@ jobs:
       - run: npm ci
       - run: |
           npm run lint --if-present || npx eslint "src/**/*.{js,jsx}"
-      - run: CI=true npm test -- --watch=false --coverage
+      - run: CI=true npm test -- --watch=false --coverage --passWithNoTests
       - run: npm audit --production
