@@ -67,7 +67,6 @@ dependencies = [
     "opencv-python-headless (==4.10.0.84)",
     "opt-einsum (==3.3.0)",
     "packaging (==25.0)",
-    "paddlepaddle (==3.2.1)",
     "pandas (==2.2.2)",
     "pdfminer-six (==20240706)",
     "pillow (==10.3.0)",
@@ -135,7 +134,7 @@ priority = "explicit"
 
 
 [tool.poetry.dependencies]
-paddlepaddle = {source = "paddle-stable-cpu"}
+paddlepaddle = {version = "3.2.1", source = "paddle-stable-cpu"}
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
