@@ -5,9 +5,16 @@ from app import models  # noqa: F401  (ensures models are registered)
 from app.db import Base, engine
 from app.logging import configure_logging
 from app.middleware import RequestLoggingMiddleware
-from app.routers import (ai_router, assignments, auth, courses,
-                         extract_infomation, marking_result_manage,
-                         submissions, system_logs)
+from app.routers import (
+    ai_router,
+    assignments,
+    auth,
+    courses,
+    extract_infomation,
+    marking_result_manage,
+    submissions,
+    system_logs,
+)
 
 app = FastAPI(title="Grader Backend (Poetry + AI)", version="1.0.0")
 configure_logging()

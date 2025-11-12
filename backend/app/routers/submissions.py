@@ -5,8 +5,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form,
-                     HTTPException, UploadFile)
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
 from sqlalchemy.orm import Session
 
 from ..db import get_db
@@ -305,8 +312,11 @@ async def create_submission(
         # Mark course AI status as not completed while jobs are queued
         try:
             from .. import models as _models
-            from .marking_result_manage import (course_json_path_by_course,
-                                                load_json, save_json_atomic)
+            from .marking_result_manage import (
+                course_json_path_by_course,
+                load_json,
+                save_json_atomic,
+            )
 
             course_obj = (
                 db.query(_models.Course)
@@ -365,8 +375,11 @@ async def append_files(
         )
         # Mark course AI status as not completed while jobs are queued
         try:
-            from .marking_result_manage import (course_json_path_by_course,
-                                                load_json, save_json_atomic)
+            from .marking_result_manage import (
+                course_json_path_by_course,
+                load_json,
+                save_json_atomic,
+            )
 
             course_obj = (
                 db.get(models.Course, getattr(sub, "course_id", None))

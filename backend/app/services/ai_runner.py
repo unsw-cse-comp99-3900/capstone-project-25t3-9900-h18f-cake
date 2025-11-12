@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 
 from .. import models
 from ..db import SessionLocal
-from ..routers.marking_result_manage import (course_json_path_by_course,
-                                             load_json, save_json_atomic)
+from ..routers.marking_result_manage import (
+    course_json_path_by_course,
+    load_json,
+    save_json_atomic,
+)
 from ..utils.path_utils import assignment_dir
 from .ai_bridge import copy_students_for_predict_to_ai
 from .marking_sync import sync_ai_predictions_from_file

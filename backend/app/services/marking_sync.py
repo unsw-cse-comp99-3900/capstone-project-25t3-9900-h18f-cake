@@ -8,10 +8,13 @@ from sqlalchemy.orm import Session
 
 from .. import models
 from ..logging import get_logger
-from ..routers.marking_result_manage import (_REVIEW_DIFF_THRESHOLD,
-                                             _now_utc_iso,
-                                             course_json_path_by_course,
-                                             load_json, save_json_atomic)
+from ..routers.marking_result_manage import (
+    _REVIEW_DIFF_THRESHOLD,
+    _now_utc_iso,
+    course_json_path_by_course,
+    load_json,
+    save_json_atomic,
+)
 from ..services.system_log_service import record_system_log
 from ..tutor_marking_extract import TutorMarkExtractor
 
