@@ -6,6 +6,8 @@ app/**/__pycache__/
 __pycache__/
 *.pyc
 /dev.db
+coverage.xml
+.coverage
 /uploads/
 /marking_result/
 
