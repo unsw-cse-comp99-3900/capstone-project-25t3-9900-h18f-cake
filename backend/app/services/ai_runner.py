@@ -13,8 +13,32 @@ from ..routers.marking_result_manage import (
     save_json_atomic,
 )
 from ..utils.path_utils import assignment_dir
-from .ai_bridge import copy_students_for_predict_to_ai
+from .ai_bridge import copy_students_for_predict_to_ai,copy_teacher_marked_to_ai,copy_spec_and_rubric_to_ai
 from .marking_sync import sync_ai_predictions_from_file
+
+
+def _run_predict_pipeline():
+    from AI.scripts.predict_scores import run_predict_pipeline  # lazy import
+    run_predict_pipeline()
+
+
+def _fetch_assignment_ctx(assignment_id: int) -> tuple[models.Assignment, models.Course, Path] | None:
+    session = SessionLocal()
+    try:
+        assignment = session.get(models.Assignment, assignment_id)
+        if not assignment or not assignment.course:
+            print(f"[AI][RUNNER] Assignment {assignment_id} not found or missing course relation")
+            return None
+        course = assignment.course
+        assignment_root = assignment_dir(course.code, course.term or "", assignment.title, assignment.id)
+        return assignment, course, assignment_root
+    finally:
+        session.close()
+
+
+
+
+
 
 
 def ai_worker(assignment_id: int, st) -> None:
@@ -23,6 +47,28 @@ def ai_worker(assignment_id: int, st) -> None:
         flush=True,
     )
     db: Session = SessionLocal()
+
+    ctx = _fetch_assignment_ctx(assignment_id)
+    if ctx is None:
+        return
+
+    assignment, course, assignment_root = ctx
+
+
+    try:
+        copy_spec_and_rubric_to_ai(assignment_root)
+        print(f"[AI][RUNNER] Sending assignment specific and rubric to LLM model.")
+        copy_teacher_marked_to_ai(assignment_root, source="coordinator")
+        print(f"[AI][RUNNER] Preparing RAG Data Base.")
+    except FileNotFoundError as exc:
+        print(f"[AI][RUNNER] Missing spec/rubric or coordinator samples: {exc}")
+        return
+
+
+
+
+
+
     try:
         assignment: models.Assignment | None = db.get(models.Assignment, assignment_id)
         if not assignment or not assignment.course:
