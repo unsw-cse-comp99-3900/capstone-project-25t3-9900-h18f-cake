@@ -1,7 +1,11 @@
 __pycache__/
 *.pyc
 backend/marking_result/
-__pycache__/
-poetry.lock
-pyproject.toml
+backend/marking_result_csv/
+backend/uploads/
+coverage.xml
+frontend/coverage/
+.pytest_cache/
+node_modules/
 .venv
+poetry.lock
