@@ -1,4 +1,4 @@
-# AI Module – AutoGrade (DNN + LLM)
+# AI – AutoGrade (DNN + LLM)
 
 The AI module powers rubric generation and automated marking by combining:
 
@@ -72,20 +72,3 @@ Individual scripts (for debugging or incremental runs):
 - Keep sensitive keys (OpenAI, huggingface, etc.) out of git; load via `.env` or shell exports.
 - When adding new models/prompts, document them under `src/prompt/` and mention expected inputs/outputs.
 - After generating new artifacts, sync them with the backend (e.g., copy `prediction` outputs to `backend/uploads/...` as required).
-
-## Git Workflow
-
-AI work often lives on a dedicated branch:
-
-```bash
-git checkout ai_module
-git pull origin ai_module
-# ...changes...
-git add .
-git commit -m "Describe AI module update"
-git push origin ai_module
-```
-
-Clean up temporary artifacts (e.g., `.DS_Store`) before committing: `git rm --cached .DS_Store`.
-
-Keep this README updated whenever data paths, prompt formats, or pipeline stages change.

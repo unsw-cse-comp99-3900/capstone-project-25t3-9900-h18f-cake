@@ -1,4 +1,4 @@
-# CAKE Frontend
+# Frontend
 
 React single-page application used by coordinators and tutors to manage courses, ingest assignment artefacts, run AI-assisted marking, and reconcile tutor marks. The UI talks to the FastAPI backend via `/v1/**` endpoints.
 
@@ -169,10 +169,16 @@ Run the component/unit tests with React Testing Library:
 
 ```bash
 cd frontend
-npm test -- --watch=false --coverage
+npm test
 ```
 
-Initial coverage focuses on core navigation components (e.g., the sidebar buttons render as expected and fire the correct callbacks). As you add new features, create companion tests under `src/**/*.test.jsx` that exercise rendering logic, user interactions (`@testing-library/user-event`), and error states. Document any manual or end-to-end scenarios that cannot be automated yet.
+Jest starts in watch mode; press `a` to run all suites. Initial coverage focuses on navigation, dialog interactions (`CourseDialogs.test.jsx`, `CourseActionDialog.test.jsx`), and the dashboard data grid (`DashboardStudent.test.jsx`). As you add new features, create companion tests under `src/**/*.test.jsx` that exercise rendering logic, user interactions (`@testing-library/user-event`), and error states. Document any manual or end-to-end scenarios that cannot be automated yet.
+
+To focus on a single suite (e.g., `src/component/DashboardStudent.test.jsx`), pass the filename as a Jest pattern:
+
+```bash
+npm test -- DashboardStudent.test.jsx
+```
 
 ---
 
