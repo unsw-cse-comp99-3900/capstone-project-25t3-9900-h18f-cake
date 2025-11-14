@@ -8,3 +8,35 @@ __pycache__/
 /dev.db
 /uploads/
 /marking_result/
+
+
+# macOS
+.DS_Store
+
+# Python venv
+venv/
+__pycache__/
+*.pyc
+
+# Office temp files
+~$*.docx
+~$*.xlsx
+
+# All docx/jpeg/pdf under AI/data (your marking samples)
+AI/data/**/*.docx
+AI/data/**/*.pdf
+AI/data/**/*.jpeg
+AI/data/**/*.jpg
+AI/data/**/*.png
+
+# Assignment marking output
+AI/data/marked/
+AI/data/test/
+
+# Ignore everything in AI/data except raw folder
+AI/data/*
+!AI/data/raw/
+AI/data/raw/*
+
+# Backend report
+*.docx
