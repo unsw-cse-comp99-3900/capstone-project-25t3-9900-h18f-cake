@@ -130,6 +130,12 @@ export const submissions = {
     },
 };
 
+export const ai = {
+    initFromAssignment: (assignmentId, which = "auto") =>
+        POST(`/v1/ai/init/${assignmentId}?which=${encodeURIComponent(which)}`),
+};
+
+
 const API = {
     health,
     auth,
@@ -138,6 +144,7 @@ const API = {
     submissions,
     markingResults,
     systemLogs,
+    ai,
     getToken,
     setToken,
     clearToken,

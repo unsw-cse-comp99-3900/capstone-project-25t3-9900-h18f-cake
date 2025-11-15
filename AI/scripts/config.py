@@ -58,36 +58,48 @@ def is_rubric_file(file_path: str) -> bool:
 
     folder_path = os.path.dirname(file_path)
     file_name = os.path.basename(file_path).lower()
-    all_files = [f.lower() for f in os.listdir(folder_path)]
-    all_files_lower = [f.lower() for f in all_files]
+    folder_name = os.path.basename(folder_path).lower()
+    parent_dir = os.path.dirname(folder_path)
 
-    if "assignment" in file_name:
-        for f, f_lower in zip(all_files, all_files_lower):
-            if "rubric" in f_lower:
-                rubric_path = os.path.join(folder_path, f)
-                break
+    def _find_in_dir(dir_path: str, keyword: str) -> str | None:
+        if not os.path.isdir(dir_path):
+            return None
+        for original in os.listdir(dir_path):
+            if keyword in original.lower():
+                return os.path.join(dir_path, original)
+        return None
+
+    def _as_assignment():
+        rubric_path = _find_in_dir(folder_path, "rubric")
+        if not rubric_path:
+            rubric_path = _find_in_dir(os.path.join(parent_dir, "rubric"), "rubric")
         if rubric_path:
             print(f"[Info] Assignment requirement imported, and Rubric Founded")
-            assignment_path = file_path
-            return True, {"assignment": assignment_path, "rubric": rubric_path}
-        else:
-            print(f"[WARN]Lack of rubric!")
-            return False, None
-    elif "rubric" in file_name:
-        for f, f_lower in zip(all_files, all_files_lower):
-            if "assignment" in f_lower:
-                assignment_path = os.path.join(folder_path, f)
-                break
+            return True, {"assignment": file_path, "rubric": rubric_path}
+        print(f"[WARN]Lack of rubric!")
+        return False, None
+
+    def _as_rubric():
+        assignment_path = _find_in_dir(folder_path, "assignment")
+        if not assignment_path:
+            spec_dir = os.path.join(parent_dir, "spec")
+            assignment_path = _find_in_dir(spec_dir, "assignment") or _find_in_dir(
+                spec_dir, "spec"
+            )
         if assignment_path:
             print(f"[Info] Rubric imported,Assignment Requirement Founded")
-            rubric_path = file_path
-            return True, {"assignment": assignment_path, "rubric": rubric_path}
-        else:
-            print(f"[WARN]Lack of assignment!")
-            return False, None
-    else:
-        print(f"[INFO] Student assignment imported.]")
+            return True, {"assignment": assignment_path, "rubric": file_path}
+        print(f"[WARN]Lack of assignment!")
         return False, None
+
+    if "assignment" in file_name or "spec" in file_name or folder_name == "spec":
+        return _as_assignment()
+
+    if "rubric" in file_name or folder_name == "rubric":
+        return _as_rubric()
+
+    print(f"[INFO] Student assignment imported.]")
+    return False, None
 
 
 

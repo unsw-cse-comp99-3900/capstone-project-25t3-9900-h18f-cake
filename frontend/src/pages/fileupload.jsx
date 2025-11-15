@@ -96,6 +96,7 @@ export default function MultiStepUpload() {
       const hasPdf1 = files.some(isPdf);
       return hasFiles && hasPdf1;
     }
+    
     return hasFiles;
   }, [activeStep, uploads, assignmentName]);
 
@@ -125,6 +126,15 @@ export default function MultiStepUpload() {
         const data = await API.assignments.createWithFiles({ course, term, title: assignmentName, step1: spec, step2: rubric });
         setAssignmentId(data.id);
         toast.success("Assignment " + data.title + " is created");
+        if (data?.id) {
+          try {
+            await API.ai.initFromAssignment(data.id);
+            toast.success("AI initialization started");
+          } catch (err) {
+            console.error(err);
+            toast.warning("Assignment created, but AI init failed.");
+          }
+        }
       }
 
       if (activeStep === 2) {
