@@ -9,7 +9,7 @@ LLM_MODEL = "gpt-4o-mini"
 API_KEY_ENV = "OPENAI_API_KEY"
 USE_LLM = True
 LLM_TEMPERATURE = 0.2
-LLM_MAX_RETRIES = 3
+LLM_MAX_RETRIES = 36
 
 CLEANED_DIR = os.path.join(BASE_DIR, "artifacts/cleaned")
 CHUNK_DIR = os.path.join(BASE_DIR, "artifacts/chunks")

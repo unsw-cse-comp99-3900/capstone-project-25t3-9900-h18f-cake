@@ -72,7 +72,7 @@ class TeacherGuidedScorer:
                 except Exception as e:
                     print(f"[WARN] Failed to load {path}: {e}")
         # print(image_inputs)
-        result = self.llm.call_llm_with_images(prompt, image_inputs, as_json=True, temperature=0.25, max_retries=3)
+        result = self.llm.call_llm_with_images(prompt, image_inputs, as_json=True, temperature=0.25, max_retries=36)
  
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
