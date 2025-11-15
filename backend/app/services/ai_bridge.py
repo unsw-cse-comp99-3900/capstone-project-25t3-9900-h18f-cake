@@ -4,6 +4,14 @@ import shutil
 import stat
 import time
 from pathlib import Path
+import sys
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # backend/
+AI_DIR = PROJECT_ROOT.parent / "AI"
+if str(AI_DIR) not in sys.path:
+    sys.path.insert(0, str(AI_DIR))
+
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +80,8 @@ def copy_spec_and_rubric_to_ai(course_root: Path):
     rub_ext = rubric_file.suffix.lower() or ".pdf"
     shutil.copy2(spec_file, RUBRIC_DIR / f"assignment{spec_ext}")
     shutil.copy2(rubric_file, RUBRIC_DIR / f"rubric{rub_ext}")
+    process_pipeline(RUBRIC_DIR)
+
 
 
 def copy_teacher_marked_to_ai(coordinator_marked_root: Path, source = "coordinator"):

@@ -17,9 +17,8 @@ from .ai_bridge import copy_students_for_predict_to_ai,copy_teacher_marked_to_ai
 from .marking_sync import sync_ai_predictions_from_file
 
 
-def _run_predict_pipeline():
-    from AI.scripts.predict_scores import run_predict_pipeline  # lazy import
-    run_predict_pipeline()
+
+
 
 
 def _fetch_assignment_ctx(assignment_id: int) -> tuple[models.Assignment, models.Course, Path] | None:
@@ -56,8 +55,8 @@ def ai_worker(assignment_id: int, st) -> None:
 
 
     try:
-        copy_spec_and_rubric_to_ai(assignment_root)
-        print(f"[AI][RUNNER] Sending assignment specific and rubric to LLM model.")
+        # copy_spec_and_rubric_to_ai(assignment_root)
+        # print(f"[AI][RUNNER] Sending assignment specific and rubric to LLM model.")
         copy_teacher_marked_to_ai(assignment_root, source="coordinator")
         print(f"[AI][RUNNER] Preparing RAG Data Base.")
     except FileNotFoundError as exc:

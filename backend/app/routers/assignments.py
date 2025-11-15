@@ -94,7 +94,7 @@ def create_assignment_with_files(
     # ---------- Validate & save specification ----------
     _ensure_valid_file(step1)
     spec_ext = Path(step1.filename).suffix.lower()
-    spec_path = spec_dir / f"specification{spec_ext}"
+    spec_path = spec_dir / f"assignment_specification{spec_ext}"
     with open(spec_path, "wb") as f:
         shutil.copyfileobj(step1.file, f)
 
@@ -305,7 +305,7 @@ def update_assignment_files(
         _ensure_valid_file(spec)
         for p in spec_dir.glob("*"):
             p.unlink(missing_ok=True)
-        dest = spec_dir / f"specification{Path(spec.filename).suffix.lower()}"
+        dest = spec_dir / f"assignment_specification{Path(spec.filename).suffix.lower()}"
         with open(dest, "wb") as f:
             shutil.copyfileobj(spec.file, f)
 
