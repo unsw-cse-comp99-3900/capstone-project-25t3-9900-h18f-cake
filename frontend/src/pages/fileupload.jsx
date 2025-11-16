@@ -21,6 +21,10 @@ const STEP_LABELS = [
     "Step 6: Marked by Tutor",
     "Review & Submit",
 ];
+const ASSIGNMENT_STEPS = new Set([2, 4]);
+const MARK_STEPS = new Set([3, 5]);
+const ASSIGNMENT_FILE_REGEX = /^z\d{7}_assignment\.(docx|doc|pdf)$/i;
+const MARK_FILE_REGEX = /^z\d{7}_mark\.(docx|doc|pdf)$/i;
 
 function fileKey(f) {
   return `${f.name}-${f.lastModified}-${f.size}`;
@@ -65,6 +69,28 @@ export default function MultiStepUpload() {
 
   const handleUpload = (stepIndex) => async (newFiles) => {
     try {
+      if (ASSIGNMENT_STEPS.has(stepIndex)) {
+        const invalid = newFiles.filter((f) => !ASSIGNMENT_FILE_REGEX.test(f.name));
+        if (invalid.length > 0) {
+          toast.error(
+            `Step ${stepIndex + 1} files must be named like z1234567_assignment.docx. Invalid: ${invalid
+              .map((f) => f.name)
+              .join(", ")}`
+          );
+          return;
+        }
+      }
+      if (MARK_STEPS.has(stepIndex)) {
+        const invalid = newFiles.filter((f) => !MARK_FILE_REGEX.test(f.name));
+        if (invalid.length > 0) {
+          toast.error(
+            `Step ${stepIndex + 1} files must be named like z1234567_mark.docx. Invalid: ${invalid
+              .map((f) => f.name)
+              .join(", ")}`
+          );
+          return;
+        }
+      }
       setUploads((prev) => {
         const next = { ...prev };
         next[stepIndex] = [...newFiles, ...prev[stepIndex]];
@@ -96,6 +122,7 @@ export default function MultiStepUpload() {
       const hasPdf1 = files.some(isPdf);
       return hasFiles && hasPdf1;
     }
+    
     return hasFiles;
   }, [activeStep, uploads, assignmentName]);
 
@@ -124,7 +151,16 @@ export default function MultiStepUpload() {
         const rubric = (uploads[1] || [])[0];
         const data = await API.assignments.createWithFiles({ course, term, title: assignmentName, step1: spec, step2: rubric });
         setAssignmentId(data.id);
-        toast.success("Assignment " + data.title + " is created");
+        // toast.success("Assignment " + data.title + " is created");
+        if (data?.id) {
+          try {
+            await API.ai.initFromAssignment(data.id);
+            // toast.success("AI initialization started");
+          } catch (err) {
+            console.error(err);
+            toast.warning("Assignment created, but AI init failed.");
+          }
+        }
       }
 
       if (activeStep === 2) {
@@ -134,7 +170,7 @@ export default function MultiStepUpload() {
         const map = {};
         for (const s of created || []) if (s.student_id) map[s.student_id.toLowerCase()] = s;
         setSubByStudent(map);
-        toast.success(`Uploaded ${studentFiles.length} student file(s).`);
+        toast.success(`Step 3 completed`);
       }
 
       if (activeStep === 3) {
@@ -148,7 +184,7 @@ export default function MultiStepUpload() {
           const sub = subByStudent[zid];
           await API.submissions.appendFiles(sub.id, 4, grouped[zid], zid);
         }
-        toast.success(`Uploaded ${files.length} file(s) to step 4.`);
+        toast.success(`Step 4 completed`);
       }
 
       if (activeStep === 4) {
@@ -175,7 +211,7 @@ export default function MultiStepUpload() {
           }
         }
         setSubByStudent(map);
-        toast.success(`Uploaded ${files.length} file(s) to step 5.`);
+        toast.success(`Step 5 completed`);
       }
 
       if (activeStep === 5) {
@@ -189,7 +225,7 @@ export default function MultiStepUpload() {
           const sub = subByStudent[zid];
           await API.submissions.appendFiles(sub.id, 6, grouped[zid], zid);
         }
-        toast.success(`Uploaded ${files.length} file(s) to step 6.`);
+        toast.success(`Step 6 completed`);
       }
 
       setActiveStep((s) => s + 1);
@@ -203,7 +239,32 @@ export default function MultiStepUpload() {
     if (activeStep === 0) navigate("/courses", { replace: true });
     else setActiveStep((s) => s - 1);
   };
-  const onSubmit = () => { toast.success(`You have successfully uploaded assignment ${assignmentName}`); navigate("/courses", { replace: true }); };
+  const onSubmit = async () => {
+    if (!assignmentId) {
+        toast.error("Assignment is not created yet.");
+        return;
+    }
+    const countFor = (idx) => (uploads[idx] || []).length;
+    const payload = {
+        assignment_name: assignmentName,
+        course,
+        term,
+        step1_files: countFor(0),
+        step2_files: countFor(1),
+        step3_files: countFor(2),
+        step4_files: countFor(3),
+        step5_files: countFor(4),
+        step6_files: countFor(5),
+    };
+    try {
+        await API.assignments.finalize(assignmentId, payload);
+        toast.success(`You have successfully uploaded assignment ${assignmentName} to ${course} - ${term}`);
+        navigate("/courses", { replace: true });
+    } catch (err) {
+        console.error(err);
+        toast.error(err?.message || "Failed to finalize assignment upload");
+    }
+  };
 
   return (
     <Box sx={{ minHeight: "100svh", display: "grid", placeItems: "center", px: { xs: 2, sm: 4, md: 8 }, bgcolor: "grey.100" }}>

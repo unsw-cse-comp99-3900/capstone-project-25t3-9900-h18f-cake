@@ -902,7 +902,7 @@ export default function Airesult() {
 
                     {(!aiCompleted || statusChecking) && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            AI grading in progress for this course. Please wait...
+                            There is no assignment submitted yet, please go back to the course page to submit an assignment
                         </Alert>
                     )}
                     {loading && aiCompleted && (
@@ -1057,7 +1057,7 @@ export default function Airesult() {
                     ) : aiCompleted && dashboardOpen === "review" ? (
                         <ReviewDashboard rows={rowsForUI} courseId={courseId} onReviewed={handleReviewed} />
                     ) : (
-                        <Typography variant="h4">Coming Soon...</Typography>
+                        <Typography variant="h4"></Typography>
                     )}
                 </Box>
             </Box>

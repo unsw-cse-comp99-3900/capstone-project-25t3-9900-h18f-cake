@@ -8,7 +8,7 @@ from openai import OpenAI
 
 class LLMClient:
     def __init__(self, model: str = "gpt-4o-mini", api_key_env: str = "OPENAI_API_KEY",
-        save_log: bool = True, log_dir: Optional[str] = None):
+        save_log: bool = True, log_dir: Optional[str] = None, request_timeout: int = 10):
         api_key = os.getenv(api_key_env)
         if not api_key:
             raise ValueError(f"[WARN] No OpenAI API key found, skipping LLM expansion.")
@@ -16,6 +16,7 @@ class LLMClient:
         self.model = model
         self.save_log = save_log
         self.log_dir = log_dir or os.path.join(os.path.dirname(__file__), "..", "..", "logs", "llm_calls")
+        self.request_timeout = request_timeout
         os.makedirs(self.log_dir, exist_ok=True)
 
 
@@ -33,21 +34,24 @@ class LLMClient:
         combined_json_str = json.dumps(data, ensure_ascii=False, indent=2)
         return  promt_txt.replace(location, combined_json_str)
     
-    def call_llm(self, prompt,as_json, temperature, max_retries,output_path):
+    def call_llm(self, prompt,as_json, temperature, max_retries,output_path, timeout: Optional[int] = None):
         print("[INFO] Calling LLM...")
+        req_timeout = timeout or self.request_timeout
         for attempt in range(1, max_retries + 1):
             try:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": prompt}],
                     response_format={"type": "json_object"} if as_json else None,
-                    temperature=temperature
+                    temperature=temperature,
+                    timeout=req_timeout,
                 )
 
                 content = response.choices[0].message.content
                 result = json.loads(content) if as_json else content
                 # print(result)
                 self.save_result(result, output_path)
+                self._save_log(prompt, {"output_path": output_path, "result": result}, success=True)
                 return result
 
             except Exception as e:
@@ -55,10 +59,12 @@ class LLMClient:
                 if attempt == max_retries:
                     self._save_log(prompt, {"error": str(e)}, success=False)
                     raise RuntimeError("LLM call failed after maximum retries.") from e
-    def call_llm_with_images(self, prompt, image_inputs, as_json, temperature, max_retries):
+                
+    def call_llm_with_images(self, prompt, image_inputs, as_json, temperature, max_retries, timeout: Optional[int] = None):
 
         print("[INFO] Calling GPT with multimodal inputs...")
 
+        req_timeout = timeout or self.request_timeout
         for attempt in range(1, max_retries + 1):
             try:
                 messages = [
@@ -68,16 +74,19 @@ class LLMClient:
                     }
                 ]
 
+                print(f"[INFO] Request to GPT with multimodal inputs ")
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
                     response_format={"type": "json_object"} if as_json else None,
                     temperature=temperature,
+                    timeout=req_timeout,
                 )
 
                 content = response.choices[0].message.content
                 result = json.loads(content) if as_json else content
-                
+                self._save_log(prompt, {"result": result, "image_count": len(image_inputs)}, success=True)
+
                 return result
 
             except Exception as e:

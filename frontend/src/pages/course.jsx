@@ -58,18 +58,42 @@ export default function CoursesPage() {
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [statusPollId, setStatusPollId] = useState(null);
 
-    // AI status per course id: { [id]: { loading: bool, aiCompleted: bool, error?: string } }
+    // AI status per course id: { [id]: { loading, aiCompleted, pendingAssignments, stuckAssignments, error } }
     const [aiStatusById, setAiStatusById] = useState({});
 
     const fetchCourseStatus = async (courseId) => {
         if (!courseId) return;
-        setAiStatusById((prev) => ({ ...prev, [courseId]: { ...(prev[courseId] || {}), loading: true, error: undefined } }));
+        setAiStatusById((prev) => ({
+            ...prev,
+            [courseId]: {
+                ...(prev[courseId] || {}),
+                loading: true,
+                error: undefined,
+            },
+        }));
         try {
             const data = await API.markingResults.status(courseId);
             const aiCompleted = Boolean(data?.ai_completed);
-            setAiStatusById((prev) => ({ ...prev, [courseId]: { loading: false, aiCompleted } }));
+            setAiStatusById((prev) => ({
+                ...prev,
+                [courseId]: {
+                    loading: false,
+                    aiCompleted,
+                    pendingAssignments: data?.pending_assignments || [],
+                    stuckAssignments: data?.stuck_assignments || [],
+                },
+            }));
         } catch (e) {
-            setAiStatusById((prev) => ({ ...prev, [courseId]: { loading: false, aiCompleted: false, error: e?.message || "" } }));
+            setAiStatusById((prev) => ({
+                ...prev,
+                [courseId]: {
+                    loading: false,
+                    aiCompleted: false,
+                    error: e?.message || "",
+                    pendingAssignments: [],
+                    stuckAssignments: [],
+                },
+            }));
         }
     };
 
@@ -127,7 +151,7 @@ export default function CoursesPage() {
                 };
                 setTermCourse((prev) => [...prev, mapped]);
                 setAddCourse(false);
-                toast.success(`Created: ${mapped.title}`);
+                toast.success(`Created course: ${mapped.title}`);
             })
             .catch((err) => {
                 toast.error(err?.message || "Create failed");
@@ -181,22 +205,31 @@ export default function CoursesPage() {
         try {
             const fresh = await API.markingResults.status(c._id);
             freshDone = !!fresh?.ai_completed;
-            setAiStatusById((prev) => ({ ...prev, [c._id]: { aiCompleted: freshDone, loading: false } }));
+            setAiStatusById((prev) => ({
+                ...prev,
+                [c._id]: {
+                    aiCompleted: freshDone,
+                    loading: false,
+                    pendingAssignments: fresh?.pending_assignments || [],
+                    stuckAssignments: fresh?.stuck_assignments || [],
+                },
+            }));
         } catch (e) {
             // if status check fails, be conservative and block navigation
             freshDone = false;
         }
         const term = c.term || c.year_term || "";
-        if (!freshDone) {
-            toast.info("Results are still being prepared for this course. Please try again shortly.");
-            return;
-        }
+        // if (!freshDone) {
+        //     toast.info("Results are still being prepared for this course. Please try again shortly.");
+        //     return;
+        // }
         closeActions();
         navigate(
             `/airesult?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(term)}&courseId=${encodeURIComponent(c._id)}`,
             { replace: false }
         );
     };
+
 
     const headerIconSx = {
         width: 44,

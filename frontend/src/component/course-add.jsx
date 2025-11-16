@@ -132,7 +132,7 @@ export default function CourseAdd({ open, onClose, onAdd }) {
                     <MenuItem value="T1">Term 1</MenuItem>
                     <MenuItem value="T2">Term 2</MenuItem>
                     <MenuItem value="T3">Term 3</MenuItem>
-                    <MenuItem value="Summer">Summer Term</MenuItem>
+                    {/* <MenuItem value="Summer">Summer Term</MenuItem> */}
                 </TextField>
 
 

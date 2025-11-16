@@ -94,7 +94,7 @@ def create_assignment_with_files(
     # ---------- Validate & save specification ----------
     _ensure_valid_file(step1)
     spec_ext = Path(step1.filename).suffix.lower()
-    spec_path = spec_dir / f"specification{spec_ext}"
+    spec_path = spec_dir / f"assignment_specification{spec_ext}"
     with open(spec_path, "wb") as f:
         shutil.copyfileobj(step1.file, f)
 
@@ -123,102 +123,60 @@ def create_assignment_with_files(
 
     db.commit()
     db.refresh(a)
-    record_system_log(
-        db,
-        action="assignment.uploaded",
-        message=f"Assignment '{title}' uploaded successfully",
-        user_id=int(me.sub) if me and me.sub else None,
-        course_id=course_row.id,
-        assignment_id=a.id,
-        metadata={
-            "course": course_row.code,
-            "term": course_row.term,
-            "title": title,
-            "spec_path": str(spec_path),
-            "rubric_path": str(rubric_path),
-        },
-    )
     return a
 
 
-# @router.post("/create_with_files", response_model=schemas.AssignmentOut)
-# def create_assignment_with_files(
-#     course: str = Form(...),
-#     term: str = Form(""),
-#     title: str = Form(...),
-#     step1: UploadFile = File(...),
-#     step2: UploadFile = File(...),
-#     db: Session = Depends(get_db),
-#     me = Depends(get_current_user),
-# ):
-#     norm_term = (term or "").strip() or None
-#     q = (
-#         db.query(models.Course)
-#         .filter(
-#             models.Course.owner_id == int(me.sub),
-#             or_(models.Course.code == course, models.Course.name == course),
-#             models.Course.term == norm_term,
-#         )
-#     )
-#     course_row = q.first()
-#     if not course_row:
-#         raise HTTPException(status_code=400, detail="Course not found")
+@router.post("/{assignment_id}/finalize")
+def finalize_assignment_upload(
+    assignment_id: int,
+    payload: schemas.AssignmentFinalizeIn,
+    db: Session = Depends(get_db),
+    me=Depends(get_current_user),
+):
+    assignment = db.get(models.Assignment, assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
 
-#     a = models.Assignment(course_id=course_row.id, title=title)
-#     db.add(a)
-#     db.flush()
+    course = assignment.course or db.get(models.Course, assignment.course_id)
+    if not course:
+        raise HTTPException(status_code=400, detail="Course not found for assignment")
+    if course.owner_id != int(me.sub):
+        raise HTTPException(status_code=403, detail="Forbidden")
 
-#     base: Path = _assignment_dir(course, term, title, a.id)
-#     spec_dir = base / "spec"
-#     rubric_dir = base / "rubric"
-#     spec_dir.mkdir(parents=True, exist_ok=True)
-#     rubric_dir.mkdir(parents=True, exist_ok=True)
+    counts = {
+        "step1_files": max(0, int(payload.step1_files or 0)),
+        "step2_files": max(0, int(payload.step2_files or 0)),
+        "step3_files": max(0, int(payload.step3_files or 0)),
+        "step4_files": max(0, int(payload.step4_files or 0)),
+        "step5_files": max(0, int(payload.step5_files or 0)),
+        "step6_files": max(0, int(payload.step6_files or 0)),
+    }
+    assignment_name = payload.assignment_name or assignment.title
+    course_display = payload.course or course.code
+    term_display = payload.term or (course.term or "")
 
-#     spec_suffix = Path(step1.filename).suffix or ".pdf"
-#     rubric_suffix = Path(step2.filename).suffix or ".pdf"
-#     spec_path = spec_dir / f"specification{spec_suffix}"
-#     rubric_path = rubric_dir / f"rubric{rubric_suffix}"
+    message = (
+        f"Assignment '{assignment_name}' submitted. "
+        f"Step1={counts['step1_files']}, Step2={counts['step2_files']}, "
+        f"Step3={counts['step3_files']}, Step4={counts['step4_files']}, "
+        f"Step5={counts['step5_files']}, Step6={counts['step6_files']}."
+    )
 
-#     with open(spec_path, "wb") as f:
-#         shutil.copyfileobj(step1.file, f)
-#     with open(rubric_path, "wb") as f:
-#         shutil.copyfileobj(step2.file, f)
-
-#     meta = {
-#         "assignment_id": a.id,
-#         "course": course,
-#         "term": term,
-#         "title": title,
-#         "spec_path": str(spec_path),
-#         "rubric_path": str(rubric_path),
-#         "spec_url": None,
-#         "rubric_url": None,
-#         "created_by": me.sub,
-#     }
-#     meta_path = save_meta_json(base, meta)
-#     a.spec_url = str(meta_path)
-
-#     db.commit()
-#     db.refresh(a)
-#     return a
-
-
-# @router.put("/{assignment_id}/files", response_model=schemas.AssignmentOut)
-# def update_assignment_files(
-#     assignment_id: int,
-#     spec: UploadFile | None = File(None),
-#     rubric: UploadFile | None = File(None),
-#     db: Session = Depends(get_db),
-#     me = Depends(get_current_user),
-# ):
-#     a = db.get(models.Assignment, assignment_id)
-#     if not a:
-#         raise HTTPException(status_code=404, detail="Assignment not found")
-#     base = Path(a.spec_url).parent if a.spec_url else (settings.upload_root / "assignments" / str(a.id))
-#     spec_dir = base / "spec"
-#     rubric_dir = base / "rubric"
-#     spec_dir.mkdir(parents=True, exist_ok=True)
-#     rubric_dir.mkdir(parents=True, exist_ok=True)
+    record_system_log(
+        db,
+        action="assignment.uploaded",
+        message=message,
+        user_id=int(me.sub) if me and me.sub else None,
+        course_id=course.id,
+        assignment_id=assignment.id,
+        metadata={
+            "course": course_display,
+            "term": term_display,
+            "assignment": assignment_name,
+            **counts,
+        },
+    )
+    return {"status": "ok", "assignment_id": assignment.id, "counts": counts}
 
 #     def _ensure_pdf(u: UploadFile):
 #         if (Path(u.filename).suffix.lower() != ".pdf") or ((u.content_type or "").lower() != "application/pdf"):
@@ -305,7 +263,7 @@ def update_assignment_files(
         _ensure_valid_file(spec)
         for p in spec_dir.glob("*"):
             p.unlink(missing_ok=True)
-        dest = spec_dir / f"specification{Path(spec.filename).suffix.lower()}"
+        dest = spec_dir / f"assignment_specification{Path(spec.filename).suffix.lower()}"
         with open(dest, "wb") as f:
             shutil.copyfileobj(spec.file, f)
 

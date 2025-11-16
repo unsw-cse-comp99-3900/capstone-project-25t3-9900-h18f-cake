@@ -85,6 +85,8 @@ export const assignments = {
         const q = new URLSearchParams(params).toString();
         return GET(`/v1/assignments/${q ? `?${q}` : ""}`);
     },
+    finalize: (assignmentId, payload) =>
+        POST(`/v1/assignments/${assignmentId}/finalize`, payload),
 
     createWithFiles: ({ course, term = "", title, step1, step2 }) => {
         const fd = new FormData();
@@ -130,6 +132,12 @@ export const submissions = {
     },
 };
 
+export const ai = {
+    initFromAssignment: (assignmentId, which = "auto") =>
+        POST(`/v1/ai/init/${assignmentId}?which=${encodeURIComponent(which)}`),
+};
+
+
 const API = {
     health,
     auth,
@@ -138,6 +146,7 @@ const API = {
     submissions,
     markingResults,
     systemLogs,
+    ai,
     getToken,
     setToken,
     clearToken,
