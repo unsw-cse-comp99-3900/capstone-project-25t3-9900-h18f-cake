@@ -85,6 +85,8 @@ export const assignments = {
         const q = new URLSearchParams(params).toString();
         return GET(`/v1/assignments/${q ? `?${q}` : ""}`);
     },
+    finalize: (assignmentId, payload) =>
+        POST(`/v1/assignments/${assignmentId}/finalize`, payload),
 
     createWithFiles: ({ course, term = "", title, step1, step2 }) => {
         const fd = new FormData();

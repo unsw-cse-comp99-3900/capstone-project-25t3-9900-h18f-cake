@@ -1,11 +1,13 @@
 
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography, Box } from "@mui/material";
 
 export default function CourseActionDialog({ open, course, onClose, onUpload, onView, viewStatus }) {
     const term = course?.term || course?.year_term || "";
     const aiCompleted = !!(viewStatus && viewStatus.aiCompleted);
     const loading = !!(viewStatus && viewStatus.loading);
     const errorMsg = viewStatus && viewStatus.error;
+    const pendingAssignments = viewStatus?.pendingAssignments || [];
+    const stuckAssignments = viewStatus?.stuckAssignments || [];
 
     return (
         <Dialog
@@ -30,8 +32,8 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
             </DialogTitle>
 
             <DialogContent sx={{ pt: 3, pb: 3, px: 4 }}>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 5, mt: 2 }}>
-                    {course ? `${term} ${course.code} ${course.title} ` : ""}
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 5, mt: 2, textAlign: "center" }}>
+                    {course ? `${term} ${course.code} ${course.title}` : ""}
                 </Typography>
 
                 <Stack spacing={2}>
@@ -58,12 +60,47 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
 
                     {!aiCompleted && (
                         <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
-                            {loading ? "Checking AI status..." : (errorMsg ? `Status check failed: ${errorMsg}` : "Results are still being prepared for this course. You can view other courses meanwhile.")}
+                            {loading
+                                ? "Checking AI status..."
+                                : errorMsg
+                                    ? `Status check failed: ${errorMsg}`
+                                    : "Results are still being prepared for this course. You can view other courses meanwhile."}
                         </Typography>
                     )}
 
+                    {stuckAssignments.length > 0 && (
+                        <Typography variant="body2" color="error" sx={{ textAlign: "center" }}>
+                            {`Detected ${stuckAssignments.length} AI job(s) stuck for over a minute. Retry them below.`}
+                        </Typography>
+                    )}
+
+                    {pendingAssignments.length > 0 && (
+                        <Stack spacing={1.5} sx={{ mt: 2 }}>
+                            {pendingAssignments.map((job) => (
+                                <Box
+                                    key={job.assignment_id}
+                                    sx={{
+                                        border: "1px solid",
+                                        borderColor: job.stuck ? "error.light" : "grey.200",
+                                        borderRadius: 2,
+                                        p: 1.5,
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        gap: 2,
+                                        alignItems: "center",
+                                    }}
+                                >
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}> 
+                                        {job.assignment_title || `Assignment ${job.assignment_id}`}
+                                    </Typography>
+                                </Box>
+                            ))}
+                        </Stack>
+                    )}
+
+
                     <Button
-                        variant="contained"                 
+                        variant="contained"
                         size="large"
                         onClick={onView}
                         disabled={!aiCompleted || loading || !viewStatus}

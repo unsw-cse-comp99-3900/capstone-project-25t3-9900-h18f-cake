@@ -208,6 +208,7 @@ def get_marking_status(
     ai_completed = bool(data.get("ai_completed"))
     pending_assignments: List[Dict[str, Any]] = []
     stuck_assignments: List[Dict[str, Any]] = []
+    results = data.get("marking_results") or []
 
     # Dynamic override: if any assignment job of this course is queued/running, treat as not completed
     try:
@@ -232,11 +233,23 @@ def get_marking_status(
                 "message": getattr(st, "message", ""),
                 "updated_at": getattr(st, "updated_at", None),
             }
+            info["marked_count"] = sum(
+                1
+                for r in results
+                if isinstance(r, dict)
+                and r.get("assignment_id") == a.id
+                and (
+                    r.get("ai_marking_detail") is not None
+                    or r.get("ai_total") is not None
+                )
+            )
             if info["updated_at"] is not None:
                 info["updated_ago"] = max(0, now_ts - float(info["updated_at"]))
             else:
                 info["updated_ago"] = None
 
+            if state not in {"queued", "running", "error"}:
+                continue
             pending_assignments.append(info)
             if state in {"queued", "running"}:
                 pending = True
@@ -247,6 +260,10 @@ def get_marking_status(
                     stuck_assignments.append(info)
                 else:
                     info["stuck"] = False
+            elif state == "error":
+                pending = True
+                info["stuck"] = True
+                stuck_assignments.append(info)
         if pending:
             ai_completed = False
     except Exception as exc:
@@ -254,6 +271,40 @@ def get_marking_status(
             "Failed to inspect AI job queue for course %s: %s", course.id, exc
         )
         # Fall back to stored flag if dynamic status check fails
+    else:
+        for info in stuck_assignments:
+            try:
+                exists = (
+                    db.query(models.SystemLog)
+                    .filter(
+                        models.SystemLog.assignment_id == info["assignment_id"],
+                        models.SystemLog.action == "ai_marking.stuck",
+                    )
+                    .first()
+                )
+                if exists:
+                    continue
+                record_system_log(
+                    db,
+                    action="ai_marking.stuck",
+                    message=(
+                        f"AI marking appears stuck for assignment '{info.get('assignment_title') or info.get('assignment_id')}'."
+                    ),
+                    user_id=None,
+                    course_id=course.id,
+                    assignment_id=info.get("assignment_id"),
+                    metadata={
+                        "state": info.get("state"),
+                        "progress": info.get("progress"),
+                        "message": info.get("message"),
+                        "updated_ago": info.get("updated_ago"),
+                    },
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to record stuck AI log for assignment %s",
+                    info.get("assignment_id"),
+                )
 
     return {
         "ai_completed": ai_completed,

@@ -73,7 +73,7 @@ export default function AdminLogsPage() {
 
     const handleDownloadCsv = useCallback(() => {
         if (!logs.length) return;
-        const headers = ["Timestamp", "Level", "Action", "Message", "User", "Course", "Assignment"];
+                        const headers = ["Timestamp", "Level", "Action", "Message", "User", "Course", "Assignment"];
         const formatCell = (value) => {
             if (value === null || value === undefined) return "";
             const str = String(value).replace(/\r?\n/g, " ").trim();
@@ -248,9 +248,7 @@ export default function AdminLogsPage() {
                                             : log.course_name
                                         : log.course_code || "—"}
                                 </TableCell>
-                                <TableCell>
-                                    {log.assignment_title || "—"}
-                                </TableCell>
+                                <TableCell>{log.assignment_title || "—"}</TableCell>
                             </TableRow>
                         ))}
                         {!logs.length && !loading && (
