@@ -243,6 +243,15 @@ def get_marking_status(
                     or r.get("ai_total") is not None
                 )
             )
+            total_students = (
+                db.query(models.Submission)
+                .filter(models.Submission.assignment_id == a.id)
+                .count()
+            )
+            info["total_students"] = total_students
+            info["pending_students"] = max(
+                0, total_students - info["marked_count"]
+            )
             if info["updated_at"] is not None:
                 info["updated_ago"] = max(0, now_ts - float(info["updated_at"]))
             else:

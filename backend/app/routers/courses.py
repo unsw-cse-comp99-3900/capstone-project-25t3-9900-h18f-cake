@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..db import get_db
 from ..deps import UserClaims, get_current_user
+from ..services.system_log_service import record_system_log
 
 router = APIRouter(prefix="/v1/courses", tags=["courses"])
 
@@ -71,6 +72,14 @@ def create_course(
         }
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(init_data, f, indent=4, ensure_ascii=False)
+    record_system_log(
+        db,
+        action="course.created",
+        message=f"Course '{code}' ({term}) created",
+        user_id=int(me.sub),
+        course_id=c.id,
+        metadata={"course": code, "name": name, "term": term},
+    )
     return c
 
 
@@ -114,6 +123,15 @@ def delete_course(
         file_path.unlink()
         print(f"Deleted {file_path.resolve()}")
 
+    course_meta = {"course": c.code, "name": c.name, "term": c.term}
     db.delete(c)
     db.commit()
+    record_system_log(
+        db,
+        action="course.deleted",
+        message=f"Course '{course_meta['course']}' ({course_meta['term']}) deleted",
+        user_id=int(me.sub),
+        course_id=course_id,
+        metadata=course_meta,
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

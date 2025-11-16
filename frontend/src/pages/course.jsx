@@ -219,10 +219,10 @@ export default function CoursesPage() {
             freshDone = false;
         }
         const term = c.term || c.year_term || "";
-        if (!freshDone) {
-            toast.info("Results are still being prepared for this course. Please try again shortly.");
-            return;
-        }
+        // if (!freshDone) {
+        //     toast.info("Results are still being prepared for this course. Please try again shortly.");
+        //     return;
+        // }
         closeActions();
         navigate(
             `/airesult?course=${encodeURIComponent(c.code)}&term=${encodeURIComponent(term)}&courseId=${encodeURIComponent(c._id)}`,

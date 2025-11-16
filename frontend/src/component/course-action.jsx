@@ -1,5 +1,5 @@
 
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography, Box } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography, Box, Alert } from "@mui/material";
 
 export default function CourseActionDialog({ open, course, onClose, onUpload, onView, viewStatus }) {
     const term = course?.term || course?.year_term || "";
@@ -7,6 +7,11 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
     const loading = !!(viewStatus && viewStatus.loading);
     const errorMsg = viewStatus && viewStatus.error;
     const pendingAssignments = viewStatus?.pendingAssignments || [];
+    const primaryPending = pendingAssignments[0];
+    const pendingMarked = primaryPending?.marked_count ?? 0;
+    const pendingTotal = primaryPending?.total_students ?? 0;
+    const pendingRemaining =
+        primaryPending?.pending_students ?? Math.max(0, pendingTotal - pendingMarked);
     const stuckAssignments = viewStatus?.stuckAssignments || [];
 
     return (
@@ -58,52 +63,27 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                         Upload an assignment
                     </Button>
 
-                    {!aiCompleted && (
-                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
-                            {loading
-                                ? "Checking AI status..."
-                                : errorMsg
-                                    ? `Status check failed: ${errorMsg}`
-                                    : "Results are still being prepared for this course. You can view other courses meanwhile."}
-                        </Typography>
-                    )}
-
                     {stuckAssignments.length > 0 && (
-                        <Typography variant="body2" color="error" sx={{ textAlign: "center" }}>
-                            {`Detected ${stuckAssignments.length} AI job(s) stuck for over a minute. Retry them below.`}
-                        </Typography>
+                        <Alert severity="warning" sx={{ textAlign: "left" }}>
+                            {`AI job for ${
+                                stuckAssignments[0]?.assignment_title || `Assignment ${stuckAssignments[0]?.assignment_id}`
+                            } is stuck. Please rerun the upload or retry later.`}
+                        </Alert>
                     )}
 
                     {pendingAssignments.length > 0 && (
-                        <Stack spacing={1.5} sx={{ mt: 2 }}>
-                            {pendingAssignments.map((job) => (
-                                <Box
-                                    key={job.assignment_id}
-                                    sx={{
-                                        border: "1px solid",
-                                        borderColor: job.stuck ? "error.light" : "grey.200",
-                                        borderRadius: 2,
-                                        p: 1.5,
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        gap: 2,
-                                        alignItems: "center",
-                                    }}
-                                >
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}> 
-                                        {job.assignment_title || `Assignment ${job.assignment_id}`}
-                                    </Typography>
-                                </Box>
-                            ))}
-                        </Stack>
+                        <Alert severity="info" sx={{ textAlign: "left" }}>
+                            {`AI marking ${
+                                primaryPending?.assignment_title || `Assignment ${primaryPending?.assignment_id}`
+                            }: ${pendingMarked}/${pendingTotal || "?"} marked, ${pendingRemaining || "?"} remaining.`}
+                        </Alert>
                     )}
-
 
                     <Button
                         variant="contained"
                         size="large"
                         onClick={onView}
-                        disabled={!aiCompleted || loading || !viewStatus}
+                        disabled={loading || !viewStatus || pendingAssignments.length > 0}
                         sx={{
                             borderRadius: 2,
                             textTransform: "none",
@@ -118,7 +98,11 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                             "&:hover": { bgcolor: "grey.300" }
                         }}
                     >
-                        {aiCompleted ? "View AI-generated grades" : ((loading || !viewStatus) ? "Loading status..." : "Results are still processing")}
+                        {pendingAssignments.length > 0
+                            ? `AI Marking in progress`
+                            : (loading || !viewStatus)
+                                ? "Loading status..."
+                                : "View AI-generated grades"}
                     </Button>
                 </Stack>
             </DialogContent>
