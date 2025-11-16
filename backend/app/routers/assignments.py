@@ -123,21 +123,6 @@ def create_assignment_with_files(
 
     db.commit()
     db.refresh(a)
-    record_system_log(
-        db,
-        action="assignment.uploaded",
-        message=f"Assignment '{title}' uploaded successfully",
-        user_id=int(me.sub) if me and me.sub else None,
-        course_id=course_row.id,
-        assignment_id=a.id,
-        metadata={
-            "course": course_row.code,
-            "term": course_row.term,
-            "title": title,
-            "spec_path": str(spec_path),
-            "rubric_path": str(rubric_path),
-        },
-    )
     return a
 
 

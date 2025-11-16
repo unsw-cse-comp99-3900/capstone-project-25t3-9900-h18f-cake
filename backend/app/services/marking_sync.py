@@ -15,7 +15,6 @@ from ..routers.marking_result_manage import (
     load_json,
     save_json_atomic,
 )
-from ..services.system_log_service import record_system_log
 
 _tutor_extractor_import_error: Optional[Exception] = None
 try:
@@ -330,15 +329,6 @@ def sync_ai_predictions_from_file(
         updated_records.append(record)
 
     save_json_atomic(json_path, data)
-    record_system_log(
-        db,
-        action="ai_marking.success",
-        message=f"AI marking completed for assignment '{assignment.title}'",
-        user_id=None,
-        course_id=course.id,
-        assignment_id=assignment_id,
-        metadata={"count": len(updated_records)},
-    )
     logger.info(
         "ai_prediction_sync_completed",
         extra={

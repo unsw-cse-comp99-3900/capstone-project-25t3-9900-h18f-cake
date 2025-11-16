@@ -31,10 +31,10 @@ def run_predict_pipeline(course_id: int | None = None, backend_url: str = "http:
     else:
         print(f"[INFO] Found test assignments in: {cfg.TEST_DIR}")
     output_summary = cfg.LLM_PREDICTION
-    scorer.process_folder(cfg.TEST_DIR, output_summary)
+    summary = scorer.process_folder(cfg.TEST_DIR, output_summary)
+    results = summary.get("results") if isinstance(summary, dict) else summary
+    failed_students = summary.get("failed_students", []) if isinstance(summary, dict) else []
     print(f"[INFO] All results saved to: {output_summary}")
-    with open(output_summary, "r", encoding="utf-8") as f:
-        results = json.load(f)
 
     # Normalize result records for downstream uploads (legacy path)
     if isinstance(results, dict):
@@ -82,7 +82,11 @@ def run_predict_pipeline(course_id: int | None = None, backend_url: str = "http:
             except Exception as e:
                 print(f"[❌] Error uploading result: {e}")
 
-    return results
+    return {
+        "results": results,
+        "failed_students": failed_students,
+        "output_path": output_summary,
+    }
 
 if __name__ == "__main__":
     start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

@@ -82,7 +82,7 @@ class TeacherGuidedScorer:
     
 
     def process_folder(self, input_dir, output_path):
-        marked_list,all_results = [], []
+        marked_list, all_results, failed_students = [], [], []
         for file_name in tqdm(os.listdir(input_dir)):
             if not file_name.endswith(".docx"):
                 continue
@@ -98,7 +98,12 @@ class TeacherGuidedScorer:
                 loader = DataLoader()
                 img_path = os.path.join(cfg.TEST_IMAGES,zid)
                 txt_raw = loader.load_file(file_path,img_path)
-                results = self.predict_score_specific(txt_raw, output_path)
+                try:
+                    results = self.predict_score_specific(txt_raw, output_path)
+                except RuntimeError as e:
+                    failed_students.append(zid)
+                    print(f"[WARN] Retrying exhausted for {file_name}: {e}")
+                    continue
                 record = {
                     "student_id": zid,
                     "result": results
@@ -108,6 +113,7 @@ class TeacherGuidedScorer:
                 time.sleep(5)  # Avoid hitting API rate limits
             except Exception as e:
                 print(f"[ERROR] Failed {file_name}: {e}")
+                failed_students.append(zid)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         if all_results:
             with open(output_path, "w", encoding="utf-8") as f:
@@ -117,7 +123,9 @@ class TeacherGuidedScorer:
             print("[WARN] No results were generated.")
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump([], f, ensure_ascii=False, indent=2)
-        return all_results
+        if failed_students:
+            print(f"[WARN] Failed to mark {len(failed_students)} student(s): {', '.join(failed_students)}")
+        return {"results": all_results, "failed_students": failed_students}
 
 
 
