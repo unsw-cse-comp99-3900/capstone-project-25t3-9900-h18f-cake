@@ -1,5 +1,14 @@
 
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography, Alert } from "@mui/material";
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    Stack,
+    Typography,
+    Alert,
+} from "@mui/material";
 
 export default function CourseActionDialog({ open, course, onClose, onUpload, onView, viewStatus }) {
     const term = course?.term || course?.year_term || "";
@@ -7,7 +16,15 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
     const pendingAssignments = viewStatus?.pendingAssignments || [];
     const primaryPending = pendingAssignments[0] || null;
     const showProcessingAlert = pendingAssignments.length > 0;
+    const aiCompleted = viewStatus?.aiCompleted;
+    const showIncompleteStatus = !loading && viewStatus && !aiCompleted && !showProcessingAlert;
     const stuckAssignments = viewStatus?.stuckAssignments || [];
+    const viewButtonDisabled = loading || !viewStatus || showProcessingAlert || !aiCompleted;
+    const viewButtonLabel = (() => {
+        if (loading || !viewStatus) return "Loading status...";
+        if (showProcessingAlert || !aiCompleted) return "Results are still processing";
+        return "View AI-generated grades";
+    })();
 
     return (
         <Dialog
@@ -73,11 +90,17 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                         </Alert>
                     )}
 
+                    {showIncompleteStatus && (
+                        <Alert severity="info" sx={{ textAlign: "left" }}>
+                            Results are still being prepared.
+                        </Alert>
+                    )}
+
                     <Button
                         variant="contained"
                         size="large"
                         onClick={onView}
-                        disabled={loading || !viewStatus || showProcessingAlert}
+                        disabled={viewButtonDisabled}
                         sx={{
                             borderRadius: 2,
                             textTransform: "none",
@@ -92,11 +115,7 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                             "&:hover": { bgcolor: "grey.300" }
                         }}
                     >
-                        {showProcessingAlert
-                            ? `View AI-generated grades`
-                            : (loading || !viewStatus)
-                                ? "Loading status..."
-                                : "View AI-generated grades"}
+                        {viewButtonLabel}
                     </Button>
                 </Stack>
             </DialogContent>
