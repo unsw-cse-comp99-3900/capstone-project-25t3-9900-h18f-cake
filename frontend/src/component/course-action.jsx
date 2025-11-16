@@ -1,17 +1,12 @@
 
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography, Box, Alert } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack, Typography, Alert } from "@mui/material";
 
 export default function CourseActionDialog({ open, course, onClose, onUpload, onView, viewStatus }) {
     const term = course?.term || course?.year_term || "";
-    const aiCompleted = !!(viewStatus && viewStatus.aiCompleted);
     const loading = !!(viewStatus && viewStatus.loading);
-    const errorMsg = viewStatus && viewStatus.error;
     const pendingAssignments = viewStatus?.pendingAssignments || [];
-    const primaryPending = pendingAssignments[0];
-    const pendingMarked = primaryPending?.marked_count ?? 0;
-    const pendingTotal = primaryPending?.total_students ?? 0;
-    const pendingRemaining =
-        primaryPending?.pending_students ?? Math.max(0, pendingTotal - pendingMarked);
+    const primaryPending = pendingAssignments[0] || null;
+    const showProcessingAlert = pendingAssignments.length > 0;
     const stuckAssignments = viewStatus?.stuckAssignments || [];
 
     return (
@@ -25,14 +20,14 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                     sx: {
                         borderRadius: 3,
                         overflow: "hidden",
-                        width: 500,      
-                        maxWidth: "90vw" 
+                        width: 500,
+                        maxWidth: "90vw"
                     }
                 }
             }}
         >
 
-            <DialogTitle sx={{ fontWeight: 800,  borderBottom: 1, borderColor: "grey.200", bgcolor: "#eef3f8"}}>
+            <DialogTitle sx={{ fontWeight: 800, borderBottom: 1, borderColor: "grey.200", bgcolor: "#eef3f8" }}>
                 Choose an action
             </DialogTitle>
 
@@ -54,10 +49,10 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                             py: 1.2,
                             px: 3,
                             fontSize: 16,
-                            bgcolor: "grey.200",               
+                            bgcolor: "grey.200",
                             color: "grey.900",
                             transition: "background-color 0.2s ease",
-                            "&:hover": { bgcolor: "grey.300" } 
+                            "&:hover": { bgcolor: "grey.300" }
                         }}
                     >
                         Upload an assignment
@@ -65,17 +60,16 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
 
                     {stuckAssignments.length > 0 && (
                         <Alert severity="warning" sx={{ textAlign: "left" }}>
-                            {`AI job for ${
-                                stuckAssignments[0]?.assignment_title || `Assignment ${stuckAssignments[0]?.assignment_id}`
-                            } is stuck. Please rerun the upload or retry later.`}
+                            {`AI job for ${stuckAssignments[0]?.assignment_title || `Assignment ${stuckAssignments[0]?.assignment_id}`
+                                } is stuck. Please rerun the upload or retry later.`}
                         </Alert>
                     )}
 
-                    {pendingAssignments.length > 0 && (
+                    {showProcessingAlert && (
                         <Alert severity="info" sx={{ textAlign: "left" }}>
-                            {`AI marking ${
-                                primaryPending?.assignment_title || `Assignment ${primaryPending?.assignment_id}`
-                            }: ${pendingMarked}/${pendingTotal || "?"} marked, ${pendingRemaining || "?"} remaining.`}
+                            {pendingAssignments.length > 0
+                                ? `AI marking in progress for assignment ${primaryPending?.assignment_title || "..."}.`
+                                : "AI marking is running."}
                         </Alert>
                     )}
 
@@ -83,7 +77,7 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                         variant="contained"
                         size="large"
                         onClick={onView}
-                        disabled={loading || !viewStatus || pendingAssignments.length > 0}
+                        disabled={loading || !viewStatus || showProcessingAlert}
                         sx={{
                             borderRadius: 2,
                             textTransform: "none",
@@ -98,8 +92,8 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                             "&:hover": { bgcolor: "grey.300" }
                         }}
                     >
-                        {pendingAssignments.length > 0
-                            ? `AI Marking in progress`
+                        {showProcessingAlert
+                            ? `View AI-generated grades`
                             : (loading || !viewStatus)
                                 ? "Loading status..."
                                 : "View AI-generated grades"}
@@ -109,15 +103,15 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
 
 
             <DialogActions sx={{ backgroundColor: "#f0f0f0", borderTop: 1, borderColor: "grey.200" }}>
-                <Button 
-                    onClick={onClose} 
-                    variant="contained" 
+                <Button
+                    onClick={onClose}
+                    variant="contained"
                     sx={{
-                    backgroundColor: "grey.800",
-                    "&:hover": { backgroundColor: "grey.500" },
-                    borderRadius: "12px",
-                    textTransform: "none",
-                }}>
+                        backgroundColor: "grey.800",
+                        "&:hover": { backgroundColor: "grey.500" },
+                        borderRadius: "12px",
+                        textTransform: "none",
+                    }}>
                     Cancel
                 </Button>
             </DialogActions>

@@ -21,6 +21,10 @@ const STEP_LABELS = [
     "Step 6: Marked by Tutor",
     "Review & Submit",
 ];
+const ASSIGNMENT_STEPS = new Set([2, 4]);
+const MARK_STEPS = new Set([3, 5]);
+const ASSIGNMENT_FILE_REGEX = /^z\d{7}_assignment\.(docx|doc|pdf)$/i;
+const MARK_FILE_REGEX = /^z\d{7}_mark\.(docx|doc|pdf)$/i;
 
 function fileKey(f) {
   return `${f.name}-${f.lastModified}-${f.size}`;
@@ -65,6 +69,28 @@ export default function MultiStepUpload() {
 
   const handleUpload = (stepIndex) => async (newFiles) => {
     try {
+      if (ASSIGNMENT_STEPS.has(stepIndex)) {
+        const invalid = newFiles.filter((f) => !ASSIGNMENT_FILE_REGEX.test(f.name));
+        if (invalid.length > 0) {
+          toast.error(
+            `Step ${stepIndex + 1} files must be named like z1234567_assignment.docx. Invalid: ${invalid
+              .map((f) => f.name)
+              .join(", ")}`
+          );
+          return;
+        }
+      }
+      if (MARK_STEPS.has(stepIndex)) {
+        const invalid = newFiles.filter((f) => !MARK_FILE_REGEX.test(f.name));
+        if (invalid.length > 0) {
+          toast.error(
+            `Step ${stepIndex + 1} files must be named like z1234567_mark.docx. Invalid: ${invalid
+              .map((f) => f.name)
+              .join(", ")}`
+          );
+          return;
+        }
+      }
       setUploads((prev) => {
         const next = { ...prev };
         next[stepIndex] = [...newFiles, ...prev[stepIndex]];
