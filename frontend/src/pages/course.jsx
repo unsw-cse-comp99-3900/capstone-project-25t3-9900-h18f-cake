@@ -127,7 +127,7 @@ export default function CoursesPage() {
                 };
                 setTermCourse((prev) => [...prev, mapped]);
                 setAddCourse(false);
-                toast.success(`Created: ${mapped.title}`);
+                toast.success(`Created course: ${mapped.title}`);
             })
             .catch((err) => {
                 toast.error(err?.message || "Create failed");

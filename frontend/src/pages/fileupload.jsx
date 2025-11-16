@@ -125,11 +125,11 @@ export default function MultiStepUpload() {
         const rubric = (uploads[1] || [])[0];
         const data = await API.assignments.createWithFiles({ course, term, title: assignmentName, step1: spec, step2: rubric });
         setAssignmentId(data.id);
-        toast.success("Assignment " + data.title + " is created");
+        // toast.success("Assignment " + data.title + " is created");
         if (data?.id) {
           try {
             await API.ai.initFromAssignment(data.id);
-            toast.success("AI initialization started");
+            // toast.success("AI initialization started");
           } catch (err) {
             console.error(err);
             toast.warning("Assignment created, but AI init failed.");
@@ -144,7 +144,7 @@ export default function MultiStepUpload() {
         const map = {};
         for (const s of created || []) if (s.student_id) map[s.student_id.toLowerCase()] = s;
         setSubByStudent(map);
-        toast.success(`Uploaded ${studentFiles.length} student file(s).`);
+        toast.success(`Step 3 completed`);
       }
 
       if (activeStep === 3) {
@@ -158,7 +158,7 @@ export default function MultiStepUpload() {
           const sub = subByStudent[zid];
           await API.submissions.appendFiles(sub.id, 4, grouped[zid], zid);
         }
-        toast.success(`Uploaded ${files.length} file(s) to step 4.`);
+        toast.success(`Step 4 completed`);
       }
 
       if (activeStep === 4) {
@@ -185,7 +185,7 @@ export default function MultiStepUpload() {
           }
         }
         setSubByStudent(map);
-        toast.success(`Uploaded ${files.length} file(s) to step 5.`);
+        toast.success(`Step 5 completed`);
       }
 
       if (activeStep === 5) {
@@ -199,7 +199,7 @@ export default function MultiStepUpload() {
           const sub = subByStudent[zid];
           await API.submissions.appendFiles(sub.id, 6, grouped[zid], zid);
         }
-        toast.success(`Uploaded ${files.length} file(s) to step 6.`);
+        toast.success(`Step 6 completed`);
       }
 
       setActiveStep((s) => s + 1);
