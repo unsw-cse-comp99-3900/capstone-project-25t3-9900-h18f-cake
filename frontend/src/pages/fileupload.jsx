@@ -213,7 +213,32 @@ export default function MultiStepUpload() {
     if (activeStep === 0) navigate("/courses", { replace: true });
     else setActiveStep((s) => s - 1);
   };
-  const onSubmit = () => { toast.success(`You have successfully uploaded assignment ${assignmentName}`); navigate("/courses", { replace: true }); };
+  const onSubmit = async () => {
+    if (!assignmentId) {
+        toast.error("Assignment is not created yet.");
+        return;
+    }
+    const countFor = (idx) => (uploads[idx] || []).length;
+    const payload = {
+        assignment_name: assignmentName,
+        course,
+        term,
+        step1_files: countFor(0),
+        step2_files: countFor(1),
+        step3_files: countFor(2),
+        step4_files: countFor(3),
+        step5_files: countFor(4),
+        step6_files: countFor(5),
+    };
+    try {
+        await API.assignments.finalize(assignmentId, payload);
+        toast.success(`You have successfully uploaded assignment ${assignmentName} to ${course} - ${term}`);
+        navigate("/courses", { replace: true });
+    } catch (err) {
+        console.error(err);
+        toast.error(err?.message || "Failed to finalize assignment upload");
+    }
+  };
 
   return (
     <Box sx={{ minHeight: "100svh", display: "grid", placeItems: "center", px: { xs: 2, sm: 4, md: 8 }, bgcolor: "grey.100" }}>

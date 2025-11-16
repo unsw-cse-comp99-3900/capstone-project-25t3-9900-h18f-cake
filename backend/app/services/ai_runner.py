@@ -210,7 +210,7 @@ def ai_worker(assignment_id: int, st) -> None:
                     db.query(models.SystemLog)
                     .filter(
                         models.SystemLog.assignment_id == assignment_id,
-                        models.SystemLog.action == "ai_marking.status",
+                        models.SystemLog.action == "ai_marking",
                     )
                     .first()
                 )
@@ -229,7 +229,7 @@ def ai_worker(assignment_id: int, st) -> None:
                 else:
                     record_system_log(
                         db,
-                        action="ai_marking.status",
+                        action="ai_marking",
                         message=message,
                         user_id=None,
                         course_id=assignment.course.id,

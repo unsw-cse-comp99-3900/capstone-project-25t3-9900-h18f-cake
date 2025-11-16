@@ -206,6 +206,8 @@ def get_marking_status(
 
     data = load_json(json_path)
     ai_completed = bool(data.get("ai_completed"))
+    pending_assignments: List[Dict[str, Any]] = []
+    stuck_assignments: List[Dict[str, Any]] = []
 
     # Dynamic override: if any assignment job of this course is queued/running, treat as not completed
     try:
@@ -214,15 +216,37 @@ def get_marking_status(
 
         st_map = get_jobq().list_status()
         pending = False
+        now_ts = datetime.datetime.utcnow().timestamp()
         for aid, st in st_map.items():
             a = db.get(models.Assignment, int(aid))
             if not a or not getattr(a, "course_id", None):
                 continue
             if a.course_id != course.id:
                 continue
-            if str(getattr(st, "state", "")).lower() in {"queued", "running"}:
+            state = str(getattr(st, "state", "")).lower()
+            info = {
+                "assignment_id": a.id,
+                "assignment_title": a.title,
+                "state": state,
+                "progress": getattr(st, "progress", 0.0),
+                "message": getattr(st, "message", ""),
+                "updated_at": getattr(st, "updated_at", None),
+            }
+            if info["updated_at"] is not None:
+                info["updated_ago"] = max(0, now_ts - float(info["updated_at"]))
+            else:
+                info["updated_ago"] = None
+
+            pending_assignments.append(info)
+            if state in {"queued", "running"}:
                 pending = True
-                break
+                stuck_for = info["updated_ago"]
+                if stuck_for is not None and stuck_for >= 60:
+                    info["stuck"] = True
+                    info["stuck_for"] = int(stuck_for)
+                    stuck_assignments.append(info)
+                else:
+                    info["stuck"] = False
         if pending:
             ai_completed = False
     except Exception as exc:
@@ -231,7 +255,11 @@ def get_marking_status(
         )
         # Fall back to stored flag if dynamic status check fails
 
-    return {"ai_completed": ai_completed}
+    return {
+        "ai_completed": ai_completed,
+        "pending_assignments": pending_assignments,
+        "stuck_assignments": stuck_assignments,
+    }
 
 
 @router.put("/{course_id}/status")

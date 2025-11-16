@@ -93,3 +93,15 @@ class SubmissionDetailOut(BaseModel):
 class UserClaims(BaseModel):
     sub: str
     role: Optional[str] = None
+
+
+class AssignmentFinalizeIn(BaseModel):
+    assignment_name: Optional[str] = None
+    course: Optional[str] = None
+    term: Optional[str] = None
+    step1_files: int = 0
+    step2_files: int = 0
+    step3_files: int = 0
+    step4_files: int = 0
+    step5_files: int = 0
+    step6_files: int = 0
