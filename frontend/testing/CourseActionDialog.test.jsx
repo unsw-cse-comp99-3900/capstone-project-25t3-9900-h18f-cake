@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import CourseActionDialog from "./course-action";
+import CourseActionDialog from "../src/component/course-action";
 
 const baseCourse = {
   code: "COMP3900",

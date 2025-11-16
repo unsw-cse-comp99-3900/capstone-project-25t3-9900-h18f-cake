@@ -2,8 +2,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
-import CourseAdd from "./course-add";
-import CourseDelete from "./course-delete";
+import CourseAdd from "../src/component/course-add";
+import CourseDelete from "../src/component/course-delete";
 
 const renderWithTheme = (ui) => {
   const theme = createTheme({
