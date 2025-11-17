@@ -420,6 +420,9 @@ def append_marking_result(
                 existing_idx = i
                 break
 
+    previous_review_mark = (existing or {}).get("review_mark")
+    previous_review_comments = (existing or {}).get("review_comments")
+
     record: Dict[str, Any] = dict(existing or {})
     record.update(incoming)
 
@@ -475,10 +478,67 @@ def append_marking_result(
         data["marking_results"].append(record)
 
     save_json_atomic(json_path, data)
+
+    def _format_mark(value: Any) -> str:
+        if value in (None, ""):
+            return "-"
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            return str(value)
+        text = f"{num:.2f}".rstrip("0").rstrip(".")
+        return text or "0"
+
+    def _mark_for_compare(value: Any) -> Any:
+        if value in (None, ""):
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return value
+
+    new_review_mark = record.get("review_mark")
+    new_review_comments = record.get("review_comments") or ""
+    prev_comments_str = (previous_review_comments or "").strip()
+    new_comments_str = str(new_review_comments).strip()
+
+    mark_changed = _mark_for_compare(previous_review_mark) != _mark_for_compare(
+        new_review_mark
+    )
+    comments_changed = prev_comments_str != new_comments_str
+
+    change_fragments: List[str] = []
+    if mark_changed:
+        if previous_review_mark in (None, "") and new_review_mark not in (None, ""):
+            change_fragments.append(f"mark set to {_format_mark(new_review_mark)}")
+        elif new_review_mark in (None, ""):
+            change_fragments.append("mark cleared")
+        else:
+            change_fragments.append(
+                f"mark {_format_mark(previous_review_mark)} -> {_format_mark(new_review_mark)}"
+            )
+    if comments_changed:
+        if not prev_comments_str and new_comments_str:
+            change_fragments.append("feedback added")
+        elif prev_comments_str and not new_comments_str:
+            change_fragments.append("feedback cleared")
+        else:
+            change_fragments.append("feedback updated")
+
+    if not change_fragments:
+        change_fragments.append("saved with no notable changes")
+
+    change_summary = "; ".join(change_fragments)
+    message = (
+        f"Review updated for zid {record.get('zid') or 'unknown'} "
+        f"(assignment: {record.get('assignment') or record.get('assignment_id') or 'unknown'}): "
+        f"{change_summary}"
+    )
+
     record_system_log(
         db,
         action="mark_review.success",
-        message=f"Review completed for zid: {record.get('zid')} assignment: {record.get('assignment')}",
+        message=message,
         user_id=int(me.sub) if me and me.sub else None,
         course_id=c.id,
         assignment_id=record.get("assignment_id"),
@@ -486,7 +546,11 @@ def append_marking_result(
             "zid": record.get("zid"),
             "assignment": record.get("assignment"),
             "review_mark": record.get("review_mark"),
+            "previous_review_mark": previous_review_mark,
+            "review_comments": new_review_comments,
+            "previous_review_comments": previous_review_comments,
             "needs_review": record.get("needs_review"),
+            "changes": change_fragments,
         },
     )
     return MarkingOut(**record)
