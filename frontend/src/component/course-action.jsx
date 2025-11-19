@@ -19,10 +19,12 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
     const aiCompleted = viewStatus?.aiCompleted;
     const showIncompleteStatus = !loading && viewStatus && !aiCompleted && !showProcessingAlert;
     const stuckAssignments = viewStatus?.stuckAssignments || [];
-    const viewButtonDisabled = loading || !viewStatus || showProcessingAlert || !aiCompleted;
+    // Allow viewing even if AI hasn't produced results yet;
+    // only block while status is loading or an AI job is actively running.
+    const viewButtonDisabled = loading || !viewStatus || showProcessingAlert;
     const viewButtonLabel = (() => {
         if (loading || !viewStatus) return "Loading status...";
-        if (showProcessingAlert || !aiCompleted) return "Results are still processing";
+        if (showProcessingAlert) return "Results are still processing";
         return "View AI-generated grades";
     })();
 
@@ -90,11 +92,11 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
                         </Alert>
                     )}
 
-                    {showIncompleteStatus && (
+                    {/* {showIncompleteStatus && (
                         <Alert severity="info" sx={{ textAlign: "left" }}>
                             Results are still being prepared.
                         </Alert>
-                    )}
+                    )} */}
 
                     <Button
                         variant="contained"
