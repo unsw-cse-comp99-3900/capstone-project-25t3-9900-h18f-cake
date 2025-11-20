@@ -1,11 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import CourseActionDialog from "./course-action";
+
 jest.mock("@mui/material/ButtonBase/TouchRipple", () => ({
   __esModule: true,
   default: () => null,
 }));
 
-import CourseActionDialog from "./course-action";
 
 const baseCourse = {
   code: "COMP3900",
