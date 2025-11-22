@@ -9,3 +9,4 @@ frontend/coverage/
 node_modules/
 .venv
 poetry.lock
+.DS_Store
