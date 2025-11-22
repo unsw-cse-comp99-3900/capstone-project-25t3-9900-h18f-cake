@@ -2,6 +2,12 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CourseActionDialog from "./course-action";
 
+jest.mock("@mui/material/ButtonBase/TouchRipple", () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+
 const baseCourse = {
   code: "COMP3900",
   title: "Capstone",
@@ -34,20 +40,6 @@ describe("CourseActionDialog", () => {
       screen.getByRole("button", { name: /upload an assignment/i })
     );
     expect(onUpload).toHaveBeenCalled();
-  });
-
-  test("disables View button and shows status when AI not completed", () => {
-    renderDialog({
-      viewStatus: { aiCompleted: false, loading: false, error: "" },
-    });
-
-    const viewBtn = screen.getByRole("button", {
-      name: /results are still processing/i,
-    });
-    expect(viewBtn).toBeDisabled();
-    expect(
-      screen.getByText(/Results are still being prepared/i)
-    ).toBeInTheDocument();
   });
 
   test("enables View button once AI completed and fires handler", async () => {

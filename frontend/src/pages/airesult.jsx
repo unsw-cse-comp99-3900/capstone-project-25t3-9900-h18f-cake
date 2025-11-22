@@ -902,7 +902,7 @@ export default function Airesult() {
 
                     {(!aiCompleted || statusChecking) && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            There is no assignment submitted yet, please go back to the course page to submit an assignment
+                            There is no assignment submitted yet, please go back to the course page to submit an assignment :)
                         </Alert>
                     )}
                     {loading && aiCompleted && (

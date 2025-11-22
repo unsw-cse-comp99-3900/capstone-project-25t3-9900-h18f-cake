@@ -186,7 +186,7 @@ export default function DashboardTutorScatter({ rows = [] }) {
             >
                 <Paper sx={{ flex: 1, p: 2 }}>
                     <Typography variant="subtitle2" color="text.secondary">
-                        Total Submission Marked by AI
+                        Submissions Marked by AI
                     </Typography>
                     <Typography variant="h4" fontWeight={700}>
                         {summaryStats.totalScripts}

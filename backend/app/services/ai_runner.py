@@ -2,6 +2,7 @@ import json
 import sys
 import threading
 import traceback
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -225,6 +226,8 @@ def ai_worker(assignment_id: int, st) -> None:
                 existing_log.message = message
                 existing_log.level = "INFO"
                 existing_log.course_id = assignment.course.id
+                # Refresh timestamp so the log ordering reflects this run.
+                existing_log.created_at = datetime.now(timezone.utc)
                 existing_log.metadata_json = json.dumps(
                     metadata, ensure_ascii=False
                 )

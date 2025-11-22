@@ -41,7 +41,8 @@ See `docker-compose.yml` for details. Use `docker compose down` to stop, and `do
 | `backend/`  | FastAPI service, AI job queue, database models, routers, and pytest suite. | [backend/README.md](backend/README.md) |
 | `frontend/` | React (CRA) SPA for coordinators/tutors, powered by MUI and React Router. | [frontend/README.md](frontend/README.md) |
 | `AI/`       | Supporting AI scripts, pipelines, and configuration used by the backend worker. | [AI/README.md](AI/README.md) |
-| `docs/`     | Additional artefacts (testing recording, client and lab recordings, design notes, diagrams, etc.). | (See files inside `docs/`) |
+| `docs/`     | Additional artefacts (Installation manual with feature demo recording, lab recordings). | (See files inside `docs/`) |
+| `test_file/`     | Dummy Testing files including all steps uploads | (See files inside `test_file/`) |
 
 
 ### Backend at a Glance
