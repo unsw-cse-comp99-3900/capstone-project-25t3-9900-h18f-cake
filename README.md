@@ -12,6 +12,13 @@ The scoped deliverable is a prototype AI-assisted moderation platform tailored t
 
 ## Quick Start
 
+### User Installation and Manual Recording:
+We made a video on how to install this application by docker and vscode including a quick lab demo on end to end user testing.
+
+- Docker installation guide: https://docs.docker.com/engine/install/
+- Vscode installation guide: https://code.visualstudio.com/download
+- Once installed, please check our installation recording and end to end application testing videos - **note that software testing is inside each application** but this is for client/user to know how to install, run and use the application. [Application Installation via Docker and Vscode & Demo ](https://unsw-my.sharepoint.com/:v:/g/personal/z5467485_ad_unsw_edu_au/EUaH3wXwz45Duawdf8kXLv8BY3hHYZCdbTyjOtlt1IorIQ?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=XtOAng). Testing file we used in the video is saved under `test_file/`.
+
 ### Docker (recommended for full stack)
 
 ```bash
