@@ -16,8 +16,8 @@ export default function CourseActionDialog({ open, course, onClose, onUpload, on
     const pendingAssignments = viewStatus?.pendingAssignments || [];
     const primaryPending = pendingAssignments[0] || null;
     const showProcessingAlert = pendingAssignments.length > 0;
-    const aiCompleted = viewStatus?.aiCompleted;
-    const showIncompleteStatus = !loading && viewStatus && !aiCompleted && !showProcessingAlert;
+    // const aiCompleted = viewStatus?.aiCompleted;
+    // const showIncompleteStatus = !loading && viewStatus && !aiCompleted && !showProcessingAlert;
     const stuckAssignments = viewStatus?.stuckAssignments || [];
     // Allow viewing even if AI hasn't produced results yet;
     // only block while status is loading or an AI job is actively running.
